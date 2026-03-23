@@ -15,7 +15,7 @@ use crate::{
     document::{Document, DocumentId},
     document_type::{DocumentType, DocumentTypeId},
     tag::{Tag, TagId},
-    task::Task,
+    task::{Task, TaskId},
 };
 
 /// Selects which cached metadata to refresh.
@@ -325,7 +325,7 @@ impl PaperlessClient {
     /// Get all tasks with optional filtering by ID, name, or acknowledged status.
     pub async fn get_task_status(
         &self,
-        task_id: Option<&str>,
+        task_id: Option<&TaskId>,
         task_name: Option<&str>,
         acknowledged: Option<bool>,
     ) -> Result<Vec<Task>> {
@@ -381,7 +381,7 @@ impl PaperlessClient {
     /// Upload a document to Paperless.
     ///
     /// Returns the task ID on success.
-    pub async fn upload_document(&self, file_path: &Path, filename: &str) -> Result<String> {
+    pub async fn upload_document(&self, file_path: &Path, filename: &str) -> Result<TaskId> {
         let file_bytes = std::fs::read(file_path)
             .map_err(|e| Error::Other(format!("Failed to read file: {e}")))?;
 
@@ -412,7 +412,7 @@ impl PaperlessClient {
             .json()
             .await
             .map_err(|e| Error::Other(format!("Failed to parse task ID: {e}")))?;
-        Ok(task_id)
+        Ok(TaskId(task_id))
     }
 
     pub fn tags(&self) -> &HashMap<TagId, Tag> {
