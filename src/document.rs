@@ -1,3 +1,13 @@
+//! Types for working with Paperless documents.
+//!
+//! Document mutations are applied locally first.
+//! Methods such as [`set_title`](Document::set_title),
+//! [`set_content`](Document::set_content),
+//! [`add_tag`](Document::add_tag), etc..
+//! only update the in-memory [`Document`] value and mark it as changed.
+//! The changes are only sent to the Paperless server when
+//! [`patch`](Document::patch) is called.
+
 use std::{fmt::Display, io, path::Path, sync::Arc};
 
 use enumflags2::{BitFlags, bitflags};
@@ -15,34 +25,37 @@ use crate::{
 #[repr(transparent)]
 pub struct DocumentId(pub i32);
 
-/// Represents a document
-#[derive(Debug, Clone, Deserialize, Serialize)]
+/// Represents a document.
+///
+/// Changes made through mutating methods such as
+/// [`set_title`](Document::set_title),
+/// [`set_content`](Document::set_content),
+/// [`add_tag`](Document::add_tag), and
+/// [`set_custom_field`](Document::set_custom_field)
+/// are only tracked locally at first.
+///
+/// They are not sent to the Paperless server until
+/// [`patch`](Document::patch) is called.
+#[derive(Debug, Clone)]
 pub struct Document {
-    /// Unique identifier of the document.
-    pub id: DocumentId,
+    data: DocumentData,
+    client: Arc<PaperlessClient>,
+    content_is_truncated: bool,
+    changed_values: BitFlags<ChangedAttributes>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub(crate) struct DocumentData {
+    id: DocumentId,
+    original_file_name: String,
+    page_count: u32,
     title: String,
     content: String,
     tags: Vec<TagId>,
     owner: i32,
     correspondent: Option<CorrespondentId>,
-    document_type: Option<DocumentTypeId>,
-
-    /// Original file name of the document.
-    pub original_file_name: String,
-
-    /// Number of pages in the document.
-    pub page_count: u32,
-
     custom_fields: Vec<DocumentCustomField>,
-
-    #[serde(skip)]
-    pub(crate) client: Option<Arc<PaperlessClient>>,
-
-    #[serde(skip)]
-    pub(crate) content_is_truncated: bool,
-
-    #[serde(skip)]
-    changed_values: BitFlags<ChangedAttributes>,
+    document_type: Option<DocumentTypeId>,
 }
 
 #[bitflags]
@@ -95,39 +108,73 @@ impl std::fmt::Display for DocumentId {
 }
 
 impl Document {
-    /// Add a tag to the document.
-    pub fn add_tag(&mut self, tag_id: TagId) {
-        if !self.tags.contains(&tag_id) {
-            self.tags.push(tag_id);
-            self.changed_values |= ChangedAttributes::Tags;
+    pub(crate) fn new(
+        data: DocumentData,
+        client: Arc<PaperlessClient>,
+        content_is_truncated: bool,
+    ) -> Self {
+        Self {
+            data,
+            client,
+            content_is_truncated,
+            changed_values: BitFlags::default(),
         }
     }
 
-    /// Get all tag-ids for the document.
+    /// Get the id of the document
     #[inline]
     #[must_use]
-    pub fn tags(&self) -> &[TagId] {
-        &self.tags
-    }
-
-    /// Set the title of the document.
-    pub fn set_title(&mut self, title: &str) {
-        self.title = title.to_string();
-        self.changed_values |= ChangedAttributes::Title;
+    pub fn id(&self) -> DocumentId {
+        self.data.id
     }
 
     /// Get the title of the document.
     #[inline]
     #[must_use]
     pub fn title(&self) -> &str {
-        &self.title
+        &self.data.title
     }
 
-    /// Set the content of the document.
-    pub fn set_content(&mut self, content: &str) {
-        self.content = content.to_string();
-        self.content_is_truncated = false;
-        self.changed_values |= ChangedAttributes::Content;
+    /// Get the original file name of the document.
+    #[inline]
+    #[must_use]
+    pub fn original_file_name(&self) -> &str {
+        &self.data.original_file_name
+    }
+
+    /// Get the correspondent id of the document.
+    #[inline]
+    #[must_use]
+    pub fn correspondent(&self) -> Option<CorrespondentId> {
+        self.data.correspondent
+    }
+
+    /// Get the document type id of the document.
+    #[inline]
+    #[must_use]
+    pub fn document_type(&self) -> Option<DocumentTypeId> {
+        self.data.document_type
+    }
+
+    /// Get the number of pages in the document.
+    #[inline]
+    #[must_use]
+    pub fn page_count(&self) -> u32 {
+        self.data.page_count
+    }
+
+    /// Get all tag-ids for the document.
+    #[inline]
+    #[must_use]
+    pub fn tags(&self) -> &[TagId] {
+        &self.data.tags
+    }
+
+    /// Get all custom fields for the document.
+    #[inline]
+    #[must_use]
+    pub fn custom_fields(&self) -> &[DocumentCustomField] {
+        &self.data.custom_fields
     }
 
     /// Get the content of the document.
@@ -135,17 +182,68 @@ impl Document {
     #[must_use]
     pub fn content(&self) -> Content<'_> {
         if self.content_is_truncated {
-            Content::Truncated(&self.content)
+            Content::Truncated(&self.data.content)
         } else {
-            Content::Full(&self.content)
+            Content::Full(&self.data.content)
         }
     }
 
-    /// Get all custom fields for the document.
-    #[inline]
-    #[must_use]
-    pub fn custom_fields(&self) -> &[DocumentCustomField] {
-        &self.custom_fields
+    /// Add a tag to the document.
+    pub fn add_tag(&mut self, tag_id: TagId) {
+        if !self.data.tags.contains(&tag_id) {
+            self.data.tags.push(tag_id);
+            self.changed_values |= ChangedAttributes::Tags;
+        }
+    }
+
+    pub fn remove_tag(&mut self, tag_id: TagId) {
+        if let Some(index) = self.data.tags.iter().position(|id| *id == tag_id) {
+            self.data.tags.remove(index);
+            self.changed_values |= ChangedAttributes::Tags;
+        }
+    }
+
+    /// Set the title of the document.
+    pub fn set_title(&mut self, title: &str) {
+        self.data.title = title.to_string();
+        self.changed_values |= ChangedAttributes::Title;
+    }
+
+    /// Set the content of the document.
+    pub fn set_content(&mut self, content: &str) {
+        self.data.content = content.to_string();
+        self.content_is_truncated = false;
+        self.changed_values |= ChangedAttributes::Content;
+    }
+
+    /// Set a custom field for the document.
+    pub fn set_custom_field(&mut self, field: CustomFieldId, value: &str) {
+        for custom_field in &mut self.data.custom_fields {
+            if custom_field.field == field {
+                custom_field.value = value.to_string();
+                self.changed_values |= ChangedAttributes::CustomFields;
+                return;
+            }
+        }
+
+        self.data.custom_fields.push(DocumentCustomField {
+            field,
+            value: value.to_string(),
+        });
+        self.changed_values |= ChangedAttributes::CustomFields;
+    }
+
+    /// Remove a custom field from the document.
+    pub fn remove_custom_field(&mut self, field: CustomFieldId) {
+        if let Some(index) = self
+            .data
+            .custom_fields
+            .iter()
+            .position(|custom_field| custom_field.field == field)
+        {
+            self.data.custom_fields.remove(index);
+            self.changed_values |= ChangedAttributes::CustomFields;
+        }
     }
 
     /// Returns `true` if the document has unsaved changes.
@@ -155,25 +253,27 @@ impl Document {
         !self.changed_values.is_empty()
     }
 
-    /// Set a custom field for the document.
-    pub fn set_custom_field(&mut self, field: CustomFieldId, value: &str) {
-        for custom_field in &mut self.custom_fields {
-            if custom_field.field == field {
-                custom_field.value = value.to_string();
-                self.changed_values |= ChangedAttributes::CustomFields;
-                return;
-            }
-        }
+    /// Refresh the document from the server.
+    ///
+    /// This will discard any local changes and replace them with the server's state.
+    pub async fn reload(&mut self) -> Result<()> {
+        let document_data = self
+            .client
+            .as_ref()
+            .get_document_data_by_id(self.data.id)
+            .await?;
 
-        self.custom_fields.push(DocumentCustomField {
-            field: field,
-            value: value.to_string(),
-        });
-        self.changed_values |= ChangedAttributes::CustomFields;
+        self.data = document_data;
+
+        self.changed_values = BitFlags::empty();
+        self.content_is_truncated = false;
+        Ok(())
     }
 
     /// Update the document on the server.
-    pub async fn update(&mut self) -> Result<()> {
+    ///
+    /// This applies the currently tracked local changes to the remote Paperless document.
+    pub async fn patch(&mut self) -> Result<()> {
         if !self.is_dirty() {
             return Ok(());
         }
@@ -182,23 +282,24 @@ impl Document {
             title: self
                 .changed_values
                 .contains(ChangedAttributes::Title)
-                .then_some(self.title.clone()),
+                .then_some(self.data.title.clone()),
 
             content: self
                 .changed_values
                 .contains(ChangedAttributes::Content)
-                .then_some(self.content.clone()),
+                .then_some(self.data.content.clone()),
 
             tags: self
                 .changed_values
                 .contains(ChangedAttributes::Tags)
-                .then_some(self.tags.clone()),
+                .then_some(self.data.tags.clone()),
 
             custom_fields: self
                 .changed_values
                 .contains(ChangedAttributes::CustomFields)
                 .then_some(
-                    self.custom_fields
+                    self.data
+                        .custom_fields
                         .iter()
                         .map(|field| DocumentCustomField {
                             field: field.field,
@@ -209,22 +310,20 @@ impl Document {
             correspondent: self
                 .changed_values
                 .contains(ChangedAttributes::Correspondent)
-                .then_some(self.correspondent)
+                .then_some(self.data.correspondent)
                 .flatten(),
 
             document_type: self
                 .changed_values
                 .contains(ChangedAttributes::DocumentType)
-                .then_some(self.document_type)
+                .then_some(self.data.document_type)
                 .flatten(),
         };
 
         self.client
-            .as_ref()
-            .unwrap()
             .request(
                 Method::PATCH,
-                &format!("/api/documents/{}/", self.id),
+                &format!("/api/documents/{}/", self.data.id),
                 Some(&serde_json::to_value(patch).expect("Patch request")),
             )
             .await?;
@@ -239,14 +338,8 @@ impl Document {
             return Ok(());
         }
 
-        let doc = self
-            .client
-            .as_ref()
-            .unwrap()
-            .get_document_by_id(self.id)
-            .await?;
-
-        self.content = doc.content;
+        let doc = self.client.get_document_data_by_id(self.data.id).await?;
+        self.data.content = doc.content;
         self.content_is_truncated = false;
         Ok(())
     }
@@ -255,11 +348,9 @@ impl Document {
     pub async fn download_to_file(&self, path: &Path) -> Result<()> {
         let resp = self
             .client
-            .as_ref()
-            .unwrap()
             .request(
                 Method::GET,
-                &format!("/api/documents/{}/download/", self.id),
+                &format!("/api/documents/{}/download/", self.data.id),
                 None,
             )
             .await?;
@@ -291,11 +382,9 @@ impl Document {
     pub async fn download_to_buffer(&self) -> Result<Vec<u8>> {
         let resp = self
             .client
-            .as_ref()
-            .unwrap()
             .request(
                 Method::GET,
-                &format!("/api/documents/{}/download/", self.id),
+                &format!("/api/documents/{}/download/", self.data.id),
                 None,
             )
             .await?;

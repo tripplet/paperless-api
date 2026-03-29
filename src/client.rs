@@ -12,7 +12,7 @@ use crate::{
     Error, Result,
     correspondent::{Correspondent, CorrespondentId},
     custom_field::{CustomField, CustomFieldId},
-    document::{Document, DocumentId},
+    document::{Document, DocumentData, DocumentId},
     document_type::{DocumentType, DocumentTypeId},
     tag::{Tag, TagId},
     task::{Task, TaskId},
@@ -229,33 +229,38 @@ impl PaperlessClient {
             .map(|tag_id| tag_id.0.to_string())
             .collect::<Vec<_>>()
             .join(",");
-        let mut documents: Vec<Document> = self
-            .fetch_all_pages(&format!(
+        let documents: Vec<_> = self
+            .fetch_all_pages::<DocumentData>(&format!(
                 "/api/documents/?truncate_content={truncate_content}&tags__id__in={tag_id_str}"
             ))
-            .await?;
-
-        for doc in &mut documents {
-            doc.client = Some(Arc::new(self.clone()));
-            doc.content_is_truncated = truncate_content;
-        }
+            .await?
+            .into_iter()
+            .map(|data| Document::new(data, Arc::new(self.clone()), truncate_content))
+            .collect();
 
         Ok(documents)
     }
 
-    /// Get a document by its ID.
-    pub async fn get_document_by_id(&self, id: DocumentId) -> Result<Document> {
+    pub(crate) async fn get_document_data_by_id(&self, id: DocumentId) -> Result<DocumentData> {
         let resp = self
             .request(Method::GET, &format!("/api/documents/{}/", id.0), None)
             .await?;
 
-        let mut document: Document = resp
+        let document_data: DocumentData = resp
             .json()
             .await
             .map_err(|e| Error::Other(format!("Failed to parse document: {e}")))?;
 
-        document.client = Some(Arc::new(self.clone()));
-        Ok(document)
+        Ok(document_data)
+    }
+
+    /// Get a document by its ID.
+    pub async fn get_document_by_id(&self, id: DocumentId) -> Result<Document> {
+        Ok(Document::new(
+            self.get_document_data_by_id(id).await?,
+            Arc::new(self.clone()),
+            false,
+        ))
     }
 
     pub(crate) async fn request(
@@ -415,26 +420,41 @@ impl PaperlessClient {
         Ok(TaskId(task_id))
     }
 
+    #[inline]
+    #[must_use]
     pub fn tags(&self) -> &HashMap<TagId, Tag> {
         &self.tags
     }
 
+    #[must_use]
     pub fn find_tag_by_name(&self, name: &str) -> Option<&Tag> {
         self.tags.values().find(|tag| tag.name == name)
     }
 
+    #[inline]
+    #[must_use]
     pub fn document_types(&self) -> &HashMap<DocumentTypeId, DocumentType> {
         &self.document_types
     }
 
+    #[must_use]
+    pub fn find_document_type_by_name(&self, name: &str) -> Option<&DocumentType> {
+        self.document_types.values().find(|dt| dt.name == name)
+    }
+
+    #[inline]
+    #[must_use]
     pub fn correspondents(&self) -> &HashMap<CorrespondentId, Correspondent> {
         &self.correspondents
     }
 
+    #[inline]
+    #[must_use]
     pub fn custom_fields(&self) -> &HashMap<CustomFieldId, CustomField> {
         &self.custom_fields
     }
 
+    #[must_use]
     pub fn find_custom_field_by_name(&self, name: &str) -> Option<&CustomField> {
         self.custom_fields.values().find(|field| field.name == name)
     }
