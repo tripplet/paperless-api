@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct TaskId(pub String);
 
 /// A paperless task
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Task {
     pub id: i32,
     pub task_id: TaskId,

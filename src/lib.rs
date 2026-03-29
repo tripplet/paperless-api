@@ -93,12 +93,14 @@ pub mod document;
 pub mod document_type;
 pub mod tag;
 pub mod task;
+pub mod user;
 
 pub use client::{PaperlessClient, RefreshData};
 pub use custom_field::{CustomField, DocumentCustomField};
 pub use document::Document;
 pub use tag::Tag;
 pub use task::Task;
+pub use user::User;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {

@@ -9,13 +9,14 @@ use serde::Deserialize;
 use tracing::{debug, trace};
 
 use crate::{
-    Error, Result,
+    Error, Result, User,
     correspondent::{Correspondent, CorrespondentId},
     custom_field::{CustomField, CustomFieldId},
     document::{Document, DocumentData, DocumentId},
     document_type::{DocumentType, DocumentTypeId},
     tag::{Tag, TagId},
     task::{Task, TaskId},
+    user::UserId,
 };
 
 /// Selects which cached metadata to refresh.
@@ -25,6 +26,7 @@ pub enum RefreshData {
     CustomFields,
     Correspondents,
     DocumentTypes,
+    Users,
 }
 
 /// Client to interact with Paperless.
@@ -37,6 +39,7 @@ pub struct PaperlessClient {
     document_types: HashMap<DocumentTypeId, DocumentType>,
     tags: HashMap<TagId, Tag>,
     custom_fields: HashMap<CustomFieldId, CustomField>,
+    users: HashMap<UserId, User>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -84,6 +87,7 @@ impl PaperlessClient {
             custom_fields: HashMap::new(),
             correspondents: HashMap::new(),
             document_types: HashMap::new(),
+            users: HashMap::new(),
         })
     }
 
@@ -122,12 +126,30 @@ impl PaperlessClient {
             .collect())
     }
 
+    async fn load_users(&self) -> Result<HashMap<UserId, User>> {
+        debug!("loading users");
+        let users: Vec<User> = self.fetch_all_pages("/api/users/").await?;
+        Ok(users.into_iter().map(|user| (user.id, user)).collect())
+    }
+
+    pub async fn refresh_all(&mut self) -> Result<()> {
+        self.refresh([
+            RefreshData::Tags,
+            RefreshData::CustomFields,
+            RefreshData::Correspondents,
+            RefreshData::DocumentTypes,
+            RefreshData::Users,
+        ])
+        .await
+    }
+
     /// Refresh selected cached metadata concurrently.
     pub async fn refresh(&mut self, data: impl IntoIterator<Item = RefreshData>) -> Result<()> {
         let mut refresh_tags = false;
         let mut refresh_custom_fields = false;
         let mut refresh_correspondents = false;
         let mut refresh_document_types = false;
+        let mut refresh_users = false;
 
         for item in data {
             match item {
@@ -135,10 +157,11 @@ impl PaperlessClient {
                 RefreshData::CustomFields => refresh_custom_fields = true,
                 RefreshData::Correspondents => refresh_correspondents = true,
                 RefreshData::DocumentTypes => refresh_document_types = true,
+                RefreshData::Users => refresh_users = true,
             }
         }
 
-        let (tags, custom_fields, correspondents, document_types) = futures_util::try_join!(
+        let (tags, custom_fields, correspondents, document_types, users) = futures_util::try_join!(
             async {
                 if refresh_tags {
                     Ok::<Option<HashMap<TagId, Tag>>, Error>(Some(self.load_tags().await?))
@@ -173,6 +196,13 @@ impl PaperlessClient {
                     Ok::<Option<HashMap<DocumentTypeId, DocumentType>>, Error>(None)
                 }
             },
+            async {
+                if refresh_users {
+                    Ok::<Option<HashMap<UserId, User>>, Error>(Some(self.load_users().await?))
+                } else {
+                    Ok::<Option<HashMap<UserId, User>>, Error>(None)
+                }
+            },
         )?;
 
         if let Some(tags) = tags {
@@ -191,31 +221,41 @@ impl PaperlessClient {
             self.document_types = document_types;
         }
 
+        if let Some(users) = users {
+            self.users = users;
+        }
+
         Ok(())
     }
 
-    /// List all tags.
+    /// Refresh tags.
     #[inline]
     pub async fn refresh_tags(&mut self) -> Result<()> {
         self.refresh([RefreshData::Tags]).await
     }
 
-    /// List all custom fields.
+    /// Refresh custom fields.
     #[inline]
     pub async fn refresh_custom_fields(&mut self) -> Result<()> {
         self.refresh([RefreshData::CustomFields]).await
     }
 
-    /// List all correspondents.
+    /// Refresh correspondents.
     #[inline]
     pub async fn refresh_correspondents(&mut self) -> Result<()> {
         self.refresh([RefreshData::Correspondents]).await
     }
 
-    /// List all document types.
+    /// Refresh document types.
     #[inline]
     pub async fn refresh_document_types(&mut self) -> Result<()> {
         self.refresh([RefreshData::DocumentTypes]).await
+    }
+
+    /// Refresh users.
+    #[inline]
+    pub async fn refresh_users(&mut self) -> Result<()> {
+        self.refresh([RefreshData::Users]).await
     }
 
     /// Get all documents with any of the given tags.
@@ -457,5 +497,11 @@ impl PaperlessClient {
     #[must_use]
     pub fn find_custom_field_by_name(&self, name: &str) -> Option<&CustomField> {
         self.custom_fields.values().find(|field| field.name == name)
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn users(&self) -> &HashMap<UserId, User> {
+        &self.users
     }
 }

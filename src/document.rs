@@ -18,7 +18,7 @@ use tokio_util::io::StreamReader;
 
 use crate::{
     DocumentCustomField, Error, Result, client::PaperlessClient, correspondent::CorrespondentId,
-    custom_field::CustomFieldId, document_type::DocumentTypeId, tag::TagId,
+    custom_field::CustomFieldId, document_type::DocumentTypeId, tag::TagId, user::UserId,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
@@ -52,7 +52,7 @@ pub(crate) struct DocumentData {
     title: String,
     content: String,
     tags: Vec<TagId>,
-    owner: i32,
+    owner: Option<UserId>,
     correspondent: Option<CorrespondentId>,
     custom_fields: Vec<DocumentCustomField>,
     document_type: Option<DocumentTypeId>,
@@ -147,6 +147,13 @@ impl Document {
     #[must_use]
     pub fn correspondent(&self) -> Option<CorrespondentId> {
         self.data.correspondent
+    }
+
+    /// Get the owner id of the document.
+    #[inline]
+    #[must_use]
+    pub fn owner(&self) -> Option<UserId> {
+        self.data.owner
     }
 
     /// Get the document type id of the document.
