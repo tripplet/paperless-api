@@ -45,9 +45,10 @@ pub struct Document {
     changed_values: BitFlags<ChangedAttributes>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub(crate) struct DocumentData {
     id: DocumentId,
+    archive_serial_number: Option<ArchiveSerialNumber>,
     original_file_name: String,
     added: DateTime<Utc>,
     created: Option<NaiveDate>,
@@ -61,6 +62,10 @@ pub(crate) struct DocumentData {
     custom_fields: Vec<DocumentCustomField>,
     document_type: Option<DocumentTypeId>,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[repr(transparent)]
+pub struct ArchiveSerialNumber(pub u32);
 
 #[bitflags]
 #[repr(u16)]
@@ -144,6 +149,13 @@ impl Document {
     #[must_use]
     pub fn id(&self) -> DocumentId {
         self.data.id
+    }
+
+    /// Get the archive serial number of the document.
+    #[inline]
+    #[must_use]
+    pub fn archive_serial_number(&self) -> Option<ArchiveSerialNumber> {
+        self.data.archive_serial_number
     }
 
     /// Get the timestamp when the document was added.
