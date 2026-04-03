@@ -81,6 +81,7 @@ impl PaperlessClient {
             base_url: base_url.to_string(),
             client: reqwest::Client::builder()
                 .default_headers(headers_map)
+                .zstd(true)
                 .build()
                 .map_err(|err| err.to_string())?,
             tags: HashMap::new(),
