@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::user::UserId;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
 #[repr(transparent)]
 pub struct DocumentTypeId(pub i32);
@@ -12,7 +14,7 @@ pub struct DocumentType {
 
     pub is_insensitive: Option<bool>,
     pub document_count: u32,
-    pub owner: Option<i32>,
+    pub owner: Option<UserId>,
     pub user_can_change: bool,
 }
 

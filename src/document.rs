@@ -73,6 +73,7 @@ enum ChangedAttributes {
     Correspondent,
     DocumentType,
     Created,
+    Owner,
 }
 
 /// The content (OCR) of a document, either full or truncated.
@@ -107,9 +108,18 @@ struct PatchRequest {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     created: Option<NaiveDate>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    owner: Option<UserId>,
 }
 
 impl std::fmt::Display for DocumentId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl std::fmt::Display for ArchiveSerialNumber {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
     }
@@ -288,6 +298,12 @@ impl Document {
         self.changed_values |= ChangedAttributes::Created;
     }
 
+    /// Set the owner of the document.
+    pub fn set_owner(&mut self, owner: UserId) {
+        self.data.owner = Some(owner);
+        self.changed_values |= ChangedAttributes::Owner;
+    }
+
     /// Returns `true` if the document has unsaved changes.
     #[inline]
     #[must_use]
@@ -365,6 +381,12 @@ impl Document {
                 .changed_values
                 .contains(ChangedAttributes::Created)
                 .then_some(self.data.created)
+                .flatten(),
+
+            owner: self
+                .changed_values
+                .contains(ChangedAttributes::Owner)
+                .then_some(self.data.owner)
                 .flatten(),
         };
 
