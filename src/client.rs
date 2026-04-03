@@ -314,6 +314,7 @@ impl PaperlessClient {
             .request(method, format!("{}{endpoint}", self.base_url))
             .header(ACCEPT, "application/json");
 
+        // Set payload body if provided
         if let Some(json_body) = body {
             req = req.json(json_body);
         }

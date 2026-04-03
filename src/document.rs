@@ -316,6 +316,18 @@ impl Document {
         self.changed_values |= ChangedAttributes::Owner;
     }
 
+    /// Set the correspondent of the document.
+    pub fn set_correspondent(&mut self, correspondent: CorrespondentId) {
+        self.data.correspondent = Some(correspondent);
+        self.changed_values |= ChangedAttributes::Correspondent;
+    }
+
+    /// Set the document type of the document.
+    pub fn set_document_type(&mut self, document_type: DocumentTypeId) {
+        self.data.document_type = Some(document_type);
+        self.changed_values |= ChangedAttributes::DocumentType;
+    }
+
     /// Returns `true` if the document has unsaved changes.
     #[inline]
     #[must_use]
