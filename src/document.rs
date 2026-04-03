@@ -10,6 +10,7 @@
 
 use std::{fmt::Display, io, path::Path, sync::Arc};
 
+use chrono::{DateTime, NaiveDate, Utc};
 use enumflags2::{BitFlags, bitflags};
 use futures_util::TryStreamExt;
 use reqwest::Method;
@@ -48,6 +49,9 @@ pub struct Document {
 pub(crate) struct DocumentData {
     id: DocumentId,
     original_file_name: String,
+    added: DateTime<Utc>,
+    created: Option<NaiveDate>,
+    modified: DateTime<Utc>,
     page_count: u32,
     title: String,
     content: String,
@@ -59,7 +63,7 @@ pub(crate) struct DocumentData {
 }
 
 #[bitflags]
-#[repr(u8)]
+#[repr(u16)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum ChangedAttributes {
     Title,
@@ -68,6 +72,7 @@ enum ChangedAttributes {
     CustomFields,
     Correspondent,
     DocumentType,
+    Created,
 }
 
 /// The content (OCR) of a document, either full or truncated.
@@ -99,6 +104,9 @@ struct PatchRequest {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     document_type: Option<DocumentTypeId>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    created: Option<NaiveDate>,
 }
 
 impl std::fmt::Display for DocumentId {
@@ -126,6 +134,27 @@ impl Document {
     #[must_use]
     pub fn id(&self) -> DocumentId {
         self.data.id
+    }
+
+    /// Get the timestamp when the document was added.
+    #[inline]
+    #[must_use]
+    pub fn added(&self) -> &DateTime<Utc> {
+        &self.data.added
+    }
+
+    /// Get the created timestamp of the document.
+    #[inline]
+    #[must_use]
+    pub fn created(&self) -> Option<&NaiveDate> {
+        self.data.created.as_ref()
+    }
+
+    /// Get the modified timestamp of the document.
+    #[inline]
+    #[must_use]
+    pub fn modified(&self) -> &DateTime<Utc> {
+        &self.data.modified
     }
 
     /// Get the title of the document.
@@ -253,6 +282,12 @@ impl Document {
         }
     }
 
+    /// Set the created date of the document.
+    pub fn set_created(&mut self, created: NaiveDate) {
+        self.data.created = Some(created);
+        self.changed_values |= ChangedAttributes::Created;
+    }
+
     /// Returns `true` if the document has unsaved changes.
     #[inline]
     #[must_use]
@@ -324,6 +359,12 @@ impl Document {
                 .changed_values
                 .contains(ChangedAttributes::DocumentType)
                 .then_some(self.data.document_type)
+                .flatten(),
+
+            created: self
+                .changed_values
+                .contains(ChangedAttributes::Created)
+                .then_some(self.data.created)
                 .flatten(),
         };
 
