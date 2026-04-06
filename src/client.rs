@@ -33,7 +33,7 @@ pub enum RefreshData {
 #[derive(Debug, Clone)]
 pub struct PaperlessClient {
     client: reqwest::Client,
-    base_url: String,
+    pub(crate) base_url: String,
 
     correspondents: HashMap<CorrespondentId, Correspondent>,
     document_types: HashMap<DocumentTypeId, DocumentType>,

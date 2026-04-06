@@ -122,6 +122,9 @@ pub enum Error {
 
     #[error("not changeable")]
     NotChangeable,
+
+    #[error("already deleted")]
+    AlreadyDeleted,
 }
 
 type Result<T> = std::result::Result<T, Error>;

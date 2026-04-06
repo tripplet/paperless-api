@@ -85,6 +85,8 @@ enum ChangedAttributes {
     DocumentType,
     Created,
     Owner,
+
+    Deleted,
 }
 
 /// The content (OCR) of a document, either full or truncated.
@@ -345,7 +347,22 @@ impl Document {
     #[inline]
     #[must_use]
     pub fn is_dirty(&self) -> bool {
-        !self.changed_values.is_empty()
+        !self.changed_values.is_empty() && !self.changed_values.contains(ChangedAttributes::Deleted)
+    }
+
+    /// Returns `true` if the document was deleted.
+    #[inline]
+    #[must_use]
+    pub fn is_deleted(&self) -> bool {
+        self.changed_values.contains(ChangedAttributes::Deleted)
+    }
+
+    fn fail_if_deleted(&self) -> Result<()> {
+        if self.is_deleted() {
+            Err(Error::AlreadyDeleted)
+        } else {
+            Ok(())
+        }
     }
 
     /// Refresh the document from the server.
@@ -372,6 +389,8 @@ impl Document {
         if !self.is_dirty() {
             return Ok(());
         }
+
+        self.fail_if_deleted()?;
 
         let patch = PatchRequest {
             title: self
@@ -439,8 +458,23 @@ impl Document {
         Ok(())
     }
 
+    pub async fn delete(&mut self) -> Result<()> {
+        self.client
+            .request(
+                Method::DELETE,
+                &format!("/api/documents/{}/", self.data.id),
+                None,
+            )
+            .await?;
+
+        self.changed_values = BitFlags::from(ChangedAttributes::Deleted);
+        Ok(())
+    }
+
     /// Get the full content of the document, replacing any truncated content.
     pub async fn get_full_content(&mut self) -> Result<()> {
+        self.fail_if_deleted()?;
+
         if !self.content_is_truncated {
             return Ok(());
         }
@@ -453,6 +487,8 @@ impl Document {
 
     /// Download the document to a file.
     pub async fn download_to_file(&self, path: &Path) -> Result<()> {
+        self.fail_if_deleted()?;
+
         let resp = self
             .client
             .request(
@@ -487,6 +523,8 @@ impl Document {
 
     /// Download the document to a buffer.
     pub async fn download_to_buffer(&self) -> Result<Vec<u8>> {
+        self.fail_if_deleted()?;
+
         let resp = self
             .client
             .request(
@@ -526,6 +564,8 @@ impl Document {
         expires: DateTime<Utc>,
         version: ShareLinkFileVersion,
     ) -> Result<ShareLink> {
+        self.fail_if_deleted()?;
+
         let resp = self
             .client
             .request(
