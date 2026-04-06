@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::user::UserId;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
 #[repr(transparent)]
 pub struct TaskId(pub String);

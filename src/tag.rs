@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
 #[repr(transparent)]
-pub struct TagId(pub i32);
+pub struct TagId(pub u32);
 
 /// A document tag
 #[derive(Debug, Clone, Deserialize)]
@@ -14,7 +14,7 @@ pub struct Tag {
     pub name: String,
 
     /// Number of documents associated with this tag.
-    pub document_count: i32,
+    pub document_count: u32,
 }
 
 impl std::fmt::Display for TagId {

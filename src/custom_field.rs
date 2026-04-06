@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
 #[repr(transparent)]
-pub struct CustomFieldId(pub i32);
+pub struct CustomFieldId(pub u32);
 
 /// Custom field definition.
 #[derive(Debug, Clone, Deserialize)]

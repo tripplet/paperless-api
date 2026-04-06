@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
 #[repr(transparent)]
-pub struct CorrespondentId(pub i32);
+pub struct CorrespondentId(pub u32);
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Correspondent {
