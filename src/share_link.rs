@@ -1,8 +1,9 @@
+use derive_more::Display;
 use serde::{Deserialize, Serialize};
 
 use crate::document::DocumentId;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
 #[repr(transparent)]
 pub struct ShareLinkId(pub u32);
 
@@ -36,12 +37,6 @@ impl ShareLink {
     #[must_use]
     pub fn url(&self) -> String {
         format!("{}/share/{}", self.base_url, self.slug)
-    }
-}
-
-impl std::fmt::Display for ShareLinkId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
     }
 }
 

@@ -11,6 +11,7 @@
 use std::{fmt::Display, io, path::Path, sync::Arc, time::Duration};
 
 use chrono::{DateTime, NaiveDate, Utc};
+use derive_more::Display;
 use enumflags2::{BitFlags, bitflags};
 use futures_util::TryStreamExt;
 use reqwest::Method;
@@ -28,7 +29,7 @@ use crate::{
     user::UserId,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
 #[repr(transparent)]
 pub struct DocumentId(pub i32);
 
@@ -69,7 +70,7 @@ pub(crate) struct DocumentData {
     document_type: Option<DocumentTypeId>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
 #[repr(transparent)]
 pub struct ArchiveSerialNumber(pub u32);
 
@@ -131,18 +132,6 @@ struct ShareLinkRequest {
     document: DocumentId,
     file_version: ShareLinkFileVersion,
     expiration: DateTime<Utc>,
-}
-
-impl std::fmt::Display for DocumentId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl std::fmt::Display for ArchiveSerialNumber {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
 }
 
 impl Document {
