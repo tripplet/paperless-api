@@ -1,9 +1,6 @@
-use derive_more::Display;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
-#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
-#[repr(transparent)]
-pub struct UserId(pub u32);
+use crate::id::UserId;
 
 /// A paperless user
 #[derive(Debug, Clone, Deserialize)]

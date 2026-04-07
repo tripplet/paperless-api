@@ -21,17 +21,9 @@ use tokio_util::io::StreamReader;
 use crate::{
     DocumentCustomField, Error, Result,
     client::PaperlessClient,
-    correspondent::CorrespondentId,
-    custom_field::CustomFieldId,
-    document_type::DocumentTypeId,
+    id::{CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, TagId, UserId},
     share_link::{ShareLink, ShareLinkFileVersion},
-    tag::TagId,
-    user::UserId,
 };
-
-#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
-#[repr(transparent)]
-pub struct DocumentId(pub i32);
 
 /// Represents a document.
 ///

@@ -1,13 +1,8 @@
-use derive_more::Display;
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
-#[repr(transparent)]
-pub struct CorrespondentId(pub u32);
+use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Correspondent {
-    pub id: CorrespondentId,
+    pub id: crate::id::CorrespondentId,
     pub slug: String,
     pub name: String,
 

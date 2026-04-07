@@ -10,13 +10,14 @@ use tracing::{debug, trace};
 
 use crate::{
     Error, Result, User,
-    correspondent::{Correspondent, CorrespondentId},
-    custom_field::{CustomField, CustomFieldId},
-    document::{Document, DocumentData, DocumentId},
-    document_type::{DocumentType, DocumentTypeId},
-    tag::{Tag, TagId},
-    task::{Task, TaskId},
-    user::UserId,
+    correspondent::Correspondent,
+    custom_field::CustomField,
+    document::{Document, DocumentData},
+    document_type::DocumentType,
+    id::{CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, TagId, TaskId, UserId},
+    tag::Tag,
+    task::Task,
+    workflow::Workflow,
 };
 
 /// Selects which cached metadata to refresh.

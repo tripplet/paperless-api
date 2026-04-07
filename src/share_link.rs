@@ -1,11 +1,4 @@
-use derive_more::Display;
 use serde::{Deserialize, Serialize};
-
-use crate::document::DocumentId;
-
-#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
-#[repr(transparent)]
-pub struct ShareLinkId(pub u32);
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -18,10 +11,10 @@ pub enum ShareLinkFileVersion {
 #[derive(Debug, Clone, Deserialize)]
 pub struct ShareLink {
     /// Unique identifier of the share link.
-    pub id: ShareLinkId,
+    pub id: crate::id::ShareLinkId,
 
     /// Document of the share link.
-    pub document: DocumentId,
+    pub document: crate::id::DocumentId,
 
     /// File version of the share link.
     pub file_version: ShareLinkFileVersion,

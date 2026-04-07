@@ -1,9 +1,6 @@
-use derive_more::Display;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
-#[repr(transparent)]
-pub struct CustomFieldId(pub u32);
+use crate::id::CustomFieldId;
 
 /// Custom field definition.
 #[derive(Debug, Clone, Deserialize)]

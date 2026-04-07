@@ -1,9 +1,6 @@
-use derive_more::Display;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
-#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
-#[repr(transparent)]
-pub struct TagId(pub u32);
+use crate::id::TagId;
 
 /// A document tag
 #[derive(Debug, Clone, Deserialize)]

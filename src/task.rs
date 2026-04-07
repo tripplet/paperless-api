@@ -1,19 +1,13 @@
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 
-use crate::user::UserId;
-
-#[derive(Debug, Display, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
-#[repr(transparent)]
-pub struct TaskId(pub String);
-
 /// A paperless task
 #[derive(Debug, Clone, Deserialize)]
 pub struct Task {
     pub id: u32,
 
     /// The Celery-ID of the task.
-    pub task_id: TaskId,
+    pub task_id: crate::id::TaskId,
 
     /// The name/king of the task.
     #[serde(rename = "task_name")]
@@ -26,7 +20,7 @@ pub struct Task {
     /// The status of the task.
     pub status: TaskStatus,
 
-    pub owner: UserId,
+    pub owner: crate::id::UserId,
 
     pub acknowledged: bool,
     pub result: Option<String>,
