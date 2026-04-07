@@ -1,6 +1,7 @@
+use derive_more::Display;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Display, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum ShareLinkFileVersion {
     Archive,
@@ -30,14 +31,5 @@ impl ShareLink {
     #[must_use]
     pub fn url(&self) -> String {
         format!("{}/share/{}", self.base_url, self.slug)
-    }
-}
-
-impl std::fmt::Display for ShareLinkFileVersion {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ShareLinkFileVersion::Archive => write!(f, "archive"),
-            ShareLinkFileVersion::Original => write!(f, "original"),
-        }
     }
 }
