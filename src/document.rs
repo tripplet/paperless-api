@@ -8,7 +8,7 @@
 //! The changes are only sent to the Paperless server when
 //! [`patch`](Document::patch) is called.
 
-use std::{fmt::Display, io, path::Path, sync::Arc};
+use std::{fmt::Display, io, path::Path, sync::Arc, time::Duration};
 
 use chrono::{DateTime, NaiveDate, Utc};
 use enumflags2::{BitFlags, bitflags};
@@ -18,8 +18,14 @@ use serde::{Deserialize, Serialize};
 use tokio_util::io::StreamReader;
 
 use crate::{
-    DocumentCustomField, Error, Result, client::PaperlessClient, correspondent::CorrespondentId,
-    custom_field::CustomFieldId, document_type::DocumentTypeId, tag::TagId, user::UserId,
+    DocumentCustomField, Error, Result,
+    client::PaperlessClient,
+    correspondent::CorrespondentId,
+    custom_field::CustomFieldId,
+    document_type::DocumentTypeId,
+    share_link::{ShareLink, ShareLinkFileVersion},
+    tag::TagId,
+    user::UserId,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
@@ -116,6 +122,13 @@ struct PatchRequest {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     owner: Option<UserId>,
+}
+
+#[derive(Debug, Serialize)]
+struct ShareLinkRequest {
+    document: DocumentId,
+    file_version: ShareLinkFileVersion,
+    expiration: DateTime<Utc>,
 }
 
 impl std::fmt::Display for DocumentId {
@@ -495,6 +508,47 @@ impl Document {
                 resp.status()
             )))
         }
+    }
+
+    /// Generates a share link for the document that expires after the specified duration.
+    pub async fn generate_share_link_duration(
+        &self,
+        valid_for: Duration,
+        version: ShareLinkFileVersion,
+    ) -> Result<ShareLink> {
+        let expires = Utc::now() + valid_for;
+        self.generate_share_link_expires(expires, version).await
+    }
+
+    /// Generates a share link for the document that expires at the specified time.
+    pub async fn generate_share_link_expires(
+        &self,
+        expires: DateTime<Utc>,
+        version: ShareLinkFileVersion,
+    ) -> Result<ShareLink> {
+        let resp = self
+            .client
+            .request(
+                Method::POST,
+                "/api/share_links/",
+                Some(
+                    &serde_json::to_value(ShareLinkRequest {
+                        document: self.data.id,
+                        file_version: version,
+                        expiration: expires,
+                    })
+                    .expect("Share link request"),
+                ),
+            )
+            .await?;
+
+        let mut share_link: ShareLink = resp
+            .json()
+            .await
+            .map_err(|e| Error::Other(format!("Failed to generate share link: {e}")))?;
+
+        share_link.base_url.clone_from(&self.client.base_url);
+        Ok(share_link)
     }
 }
 
