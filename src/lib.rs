@@ -96,6 +96,7 @@ pub mod share_link;
 pub mod tag;
 pub mod task;
 pub mod user;
+pub mod workflow;
 
 pub use client::{PaperlessClient, RefreshData};
 pub use custom_field::{CustomField, DocumentCustomField};

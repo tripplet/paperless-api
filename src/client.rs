@@ -351,7 +351,7 @@ impl PaperlessClient {
             let resp = self.request(Method::GET, &url, None).await?;
 
             let page: PaginatedResponse<T> = resp.json().await.map_err(|e| {
-                Error::Other(format!(
+                Error::InvalidJson(format!(
                     "Failed to parse paginated response for {endpoint}: {e}"
                 ))
             })?;
@@ -424,6 +424,10 @@ impl PaperlessClient {
         }
 
         Ok(tasks)
+    }
+
+    pub async fn get_workflows(&self) -> Result<Vec<Workflow>> {
+        self.fetch_all_pages("/api/workflows/").await
     }
 
     /// Upload a document to Paperless.
