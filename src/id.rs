@@ -24,6 +24,7 @@ define_ids!(
     (CustomFieldId, u32),
     (DocumentId, u32),
     (DocumentTypeId, u32),
+    (NoteId, u32),
     (ShareLinkId, u32),
     (TagId, u32),
     (TaskId, String, noncopy),

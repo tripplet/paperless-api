@@ -22,6 +22,7 @@ use crate::{
     DocumentCustomField, Error, Result,
     client::PaperlessClient,
     id::{CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, TagId, UserId},
+    note::Note,
     share_link::{ShareLink, ShareLinkFileVersion},
 };
 
@@ -60,6 +61,7 @@ pub(crate) struct DocumentData {
     correspondent: Option<CorrespondentId>,
     custom_fields: Vec<DocumentCustomField>,
     document_type: Option<DocumentTypeId>,
+    notes: Vec<Note>,
 }
 
 #[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
@@ -240,6 +242,12 @@ impl Document {
         } else {
             Content::Full(&self.data.content)
         }
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn notes(&self) -> &[Note] {
+        &self.data.notes
     }
 
     /// Add a tag to the document.

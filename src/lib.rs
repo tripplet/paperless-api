@@ -92,6 +92,7 @@ pub mod custom_field;
 pub mod document;
 pub mod document_type;
 pub mod id;
+pub mod note;
 pub mod share_link;
 pub mod tag;
 pub mod task;
