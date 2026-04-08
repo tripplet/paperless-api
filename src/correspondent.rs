@@ -7,6 +7,6 @@ pub struct Correspondent {
     pub name: String,
 
     pub document_count: u32,
-    pub owner: Option<i32>,
+    pub owner: Option<crate::id::UserId>,
     pub user_can_change: bool,
 }

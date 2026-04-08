@@ -101,11 +101,16 @@ pub mod user;
 pub mod workflow;
 
 pub use client::{PaperlessClient, RefreshData};
+pub use correspondent::Correspondent;
 pub use custom_field::{CustomField, DocumentCustomField};
 pub use document::Document;
+pub use document_type::DocumentType;
+pub use share_link::ShareLink;
+pub use storage_path::StoragePath;
 pub use tag::Tag;
 pub use task::Task;
 pub use user::User;
+pub use workflow::Workflow;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
