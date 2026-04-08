@@ -94,6 +94,7 @@ pub mod document_type;
 pub mod id;
 pub mod note;
 pub mod share_link;
+pub mod storage_path;
 pub mod tag;
 pub mod task;
 pub mod user;

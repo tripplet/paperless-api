@@ -14,7 +14,11 @@ use crate::{
     custom_field::CustomField,
     document::{Document, DocumentData},
     document_type::DocumentType,
-    id::{CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, TagId, TaskId, UserId},
+    id::{
+        CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, StoragePathId, TagId, TaskId,
+        UserId,
+    },
+    storage_path::StoragePath,
     tag::Tag,
     task::Task,
     workflow::Workflow,
@@ -28,6 +32,7 @@ pub enum RefreshData {
     Correspondents,
     DocumentTypes,
     Users,
+    StoragePaths,
 }
 
 /// Client to interact with Paperless.
@@ -41,6 +46,7 @@ pub struct PaperlessClient {
     tags: HashMap<TagId, Tag>,
     custom_fields: HashMap<CustomFieldId, CustomField>,
     users: HashMap<UserId, User>,
+    storage_paths: HashMap<StoragePathId, StoragePath>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -90,6 +96,7 @@ impl PaperlessClient {
             correspondents: HashMap::new(),
             document_types: HashMap::new(),
             users: HashMap::new(),
+            storage_paths: HashMap::new(),
         })
     }
 
@@ -134,6 +141,15 @@ impl PaperlessClient {
         Ok(users.into_iter().map(|user| (user.id, user)).collect())
     }
 
+    async fn load_storage_paths(&self) -> Result<HashMap<StoragePathId, StoragePath>> {
+        debug!("loading storage paths");
+        let storage_paths: Vec<StoragePath> = self.fetch_all_pages("/api/storage_paths/").await?;
+        Ok(storage_paths
+            .into_iter()
+            .map(|storage_path| (storage_path.id, storage_path))
+            .collect())
+    }
+
     pub async fn refresh_all(&mut self) -> Result<()> {
         self.refresh([
             RefreshData::Tags,
@@ -152,6 +168,7 @@ impl PaperlessClient {
         let mut refresh_correspondents = false;
         let mut refresh_document_types = false;
         let mut refresh_users = false;
+        let mut refresh_storage_paths = false;
 
         for item in data {
             match item {
@@ -160,10 +177,11 @@ impl PaperlessClient {
                 RefreshData::Correspondents => refresh_correspondents = true,
                 RefreshData::DocumentTypes => refresh_document_types = true,
                 RefreshData::Users => refresh_users = true,
+                RefreshData::StoragePaths => refresh_storage_paths = true,
             }
         }
 
-        let (tags, custom_fields, correspondents, document_types, users) = futures_util::try_join!(
+        let (tags, custom_fields, correspondents, document_types, users, storage_paths) = futures_util::try_join!(
             async {
                 if refresh_tags {
                     Ok::<Option<HashMap<TagId, Tag>>, Error>(Some(self.load_tags().await?))
@@ -205,6 +223,15 @@ impl PaperlessClient {
                     Ok::<Option<HashMap<UserId, User>>, Error>(None)
                 }
             },
+            async {
+                if refresh_storage_paths {
+                    Ok::<Option<HashMap<StoragePathId, StoragePath>>, Error>(Some(
+                        self.load_storage_paths().await?,
+                    ))
+                } else {
+                    Ok::<Option<HashMap<StoragePathId, StoragePath>>, Error>(None)
+                }
+            },
         )?;
 
         if let Some(tags) = tags {
@@ -225,6 +252,10 @@ impl PaperlessClient {
 
         if let Some(users) = users {
             self.users = users;
+        }
+
+        if let Some(storage_paths) = storage_paths {
+            self.storage_paths = storage_paths;
         }
 
         Ok(())
@@ -258,6 +289,12 @@ impl PaperlessClient {
     #[inline]
     pub async fn refresh_users(&mut self) -> Result<()> {
         self.refresh([RefreshData::Users]).await
+    }
+
+    /// Refresh storage paths.
+    #[inline]
+    pub async fn refresh_storage_paths(&mut self) -> Result<()> {
+        self.refresh([RefreshData::StoragePaths]).await
     }
 
     /// Get all documents with any of the given tags.
@@ -471,6 +508,12 @@ impl PaperlessClient {
     #[must_use]
     pub fn tags(&self) -> &HashMap<TagId, Tag> {
         &self.tags
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn storage_paths(&self) -> &HashMap<StoragePathId, StoragePath> {
+        &self.storage_paths
     }
 
     #[must_use]

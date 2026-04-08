@@ -21,7 +21,9 @@ use tokio_util::io::StreamReader;
 use crate::{
     DocumentCustomField, Error, Result,
     client::PaperlessClient,
-    id::{CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, TagId, UserId},
+    id::{
+        CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, StoragePathId, TagId, UserId,
+    },
     note::Note,
     share_link::{ShareLink, ShareLinkFileVersion},
 };
@@ -61,6 +63,7 @@ pub(crate) struct DocumentData {
     correspondent: Option<CorrespondentId>,
     custom_fields: Vec<DocumentCustomField>,
     document_type: Option<DocumentTypeId>,
+    storage_path: Option<StoragePathId>,
     notes: Vec<Note>,
 }
 
@@ -80,6 +83,7 @@ enum ChangedAttributes {
     DocumentType,
     Created,
     Owner,
+    StoragePath,
 
     Deleted,
 }
@@ -119,6 +123,9 @@ struct PatchRequest {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     owner: Option<UserId>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    storage_path: Option<StoragePathId>,
 }
 
 #[derive(Debug, Serialize)]
@@ -244,6 +251,14 @@ impl Document {
         }
     }
 
+    /// Get the storage path of the document.
+    #[inline]
+    #[must_use]
+    pub fn storage_path(&self) -> Option<StoragePathId> {
+        self.data.storage_path
+    }
+
+    /// Get the notes for the document.
     #[inline]
     #[must_use]
     pub fn notes(&self) -> &[Note] {
@@ -258,6 +273,7 @@ impl Document {
         }
     }
 
+    /// Remove a tag from the document.
     pub fn remove_tag(&mut self, tag_id: TagId) {
         if let Some(index) = self.data.tags.iter().position(|id| *id == tag_id) {
             self.data.tags.remove(index);
@@ -330,6 +346,12 @@ impl Document {
     pub fn set_document_type(&mut self, document_type: DocumentTypeId) {
         self.data.document_type = Some(document_type);
         self.changed_values |= ChangedAttributes::DocumentType;
+    }
+
+    /// Set the storage path of the document.
+    pub fn set_storage_path(&mut self, storage_path: StoragePathId) {
+        self.data.storage_path = Some(storage_path);
+        self.changed_values |= ChangedAttributes::StoragePath;
     }
 
     /// Returns `true` if the document has unsaved changes.
@@ -432,6 +454,12 @@ impl Document {
                 .changed_values
                 .contains(ChangedAttributes::Owner)
                 .then_some(self.data.owner)
+                .flatten(),
+
+            storage_path: self
+                .changed_values
+                .contains(ChangedAttributes::StoragePath)
+                .then_some(self.data.storage_path)
                 .flatten(),
         };
 

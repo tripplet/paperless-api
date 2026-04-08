@@ -26,6 +26,7 @@ define_ids!(
     (DocumentTypeId, u32),
     (NoteId, u32),
     (ShareLinkId, u32),
+    (StoragePathId, u32),
     (TagId, u32),
     (TaskId, String, noncopy),
     (UserId, u32),
