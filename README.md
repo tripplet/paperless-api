@@ -10,12 +10,7 @@ correspondents, document types, and tasks.
 
 - Async API built on `reqwest`
 - Access documents and related metadata from Paperless
-- Local metadata caching for:
-  - tags
-  - custom fields
-  - correspondents
-  - document types
-- Refresh one or multiple metadata caches with a simple API
+- Local metadata caching
 - Upload documents
 - Query task status
 
@@ -113,79 +108,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-## Fetching documents by tag
-
-```rust
-use paperless_api::PaperlessClient;
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut client = PaperlessClient::new(
-        "https://paperless.example.com",
-        "your-api-token",
-        None,
-    )?;
-
-    client.refresh_tags().await?;
-
-    if let Some(tag) = client.find_tag_by_name("invoice") {
-        let documents = client.get_documents_by_tags(&[tag.id], true).await?;
-        println!("found {} documents", documents.len());
-    }
-
-    Ok(())
-}
-```
-
-## Uploading a document
-
-```rust
-use std::path::Path;
-
-use paperless_api::PaperlessClient;
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let client = PaperlessClient::new(
-        "https://paperless.example.com",
-        "your-api-token",
-        None,
-    )?;
-
-    let task_id = client
-        .upload_document(Path::new("./example.pdf"), "example.pdf")
-        .await?;
-
-    println!("upload task id: {task_id}");
-
-    Ok(())
-}
-```
-
-## Checking task status
-
-```rust
-use paperless_api::PaperlessClient;
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let client = PaperlessClient::new(
-        "https://paperless.example.com",
-        "your-api-token",
-        None,
-    )?;
-
-    let tasks = client.get_task_status(None, None, None).await?;
-    println!("{} task(s) returned", tasks.len());
-
-    Ok(())
-}
-```
-
 ## Additional headers
 
-If your paperless requires additional headers, you can provide them during client
-creation:
+If your paperless instance requires additional headers to be accessed, you can provide them during client creation:
 
 ```rust
 use std::collections::HashMap;
