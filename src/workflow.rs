@@ -71,6 +71,6 @@ pub struct WebhookAction {
     pub include_document: bool,
 
     pub body: Option<String>,
-    pub headers: HashMap<String, String>,
-    pub params: HashMap<String, String>,
+    pub headers: Option<HashMap<String, String>>,
+    pub params: Option<HashMap<String, String>>,
 }
