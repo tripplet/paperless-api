@@ -13,10 +13,15 @@ use std::{borrow::Cow, fmt::Display, sync::Arc, time::Duration};
 use chrono::{DateTime, NaiveDate, Utc};
 use derive_more::Display;
 use enumflags2::{BitFlags, bitflags};
+
+#[cfg(feature = "tokio-fs")]
 use futures_util::TryStreamExt;
+
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
-use tokio_util::io::StreamReader;
+
+#[cfg(feature = "tokio-fs")]
+use tokio::io::AsyncWriteExt;
 
 use crate::{
     DocumentCustomField, Error, Result,
@@ -502,42 +507,6 @@ impl Document {
         Ok(())
     }
 
-    /// Download the document to a file.
-    pub async fn download_to_file(&self, path: &Path) -> Result<()> {
-        self.fail_if_deleted()?;
-
-        let resp = self
-            .client
-            .request(
-                Method::GET,
-                &format!("/api/documents/{}/download/", self.data.id),
-                None,
-            )
-            .await?;
-
-        if !resp.status().is_success() {
-            return Err(Error::Other(format!(
-                "Failed to download document: {}",
-                resp.status()
-            )));
-        }
-
-        let mut stream = StreamReader::new(
-            resp.bytes_stream()
-                .map_err(|e| io::Error::other(format!("Failed to read response body: {e}"))),
-        );
-
-        let mut file = tokio::fs::File::create(path)
-            .await
-            .map_err(|e| Error::Other(format!("Failed to create file: {e}")))?;
-
-        tokio::io::copy(&mut stream, &mut file)
-            .await
-            .map_err(|e| Error::Other(format!("Failed to write file: {e}")))?;
-
-        Ok(())
-    }
-
     /// Download the document to a buffer.
     pub async fn download_to_buffer(&self) -> Result<Vec<u8>> {
         self.fail_if_deleted()?;
@@ -563,6 +532,46 @@ impl Document {
                 resp.status()
             )))
         }
+    }
+
+    /// Download the document to a file, requires the `tokio-fs` feature.
+    #[cfg(feature = "tokio-fs")]
+    pub async fn download_to_file(&self, path: &std::path::Path) -> Result<()> {
+        self.fail_if_deleted()?;
+
+        let resp = self
+            .client
+            .request(
+                Method::GET,
+                &format!("/api/documents/{}/download/", self.data.id),
+                None,
+            )
+            .await?;
+
+        if !resp.status().is_success() {
+            return Err(Error::Other(format!(
+                "Failed to download document: {}",
+                resp.status()
+            )));
+        }
+
+        let mut file = tokio::fs::File::create(path)
+            .await
+            .map_err(|e| Error::Other(format!("Failed to create file: {e}")))?;
+
+        let mut stream = resp.bytes_stream();
+
+        while let Some(chunk) = stream
+            .try_next()
+            .await
+            .map_err(|e| Error::Other(format!("Failed to read response body: {e}")))?
+        {
+            file.write_all(&chunk)
+                .await
+                .map_err(|e| Error::Other(format!("Failed to write file: {e}")))?;
+        }
+
+        Ok(())
     }
 
     /// Generates a share link for the document that expires after the specified duration.
