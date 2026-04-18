@@ -1,5 +1,6 @@
 use std::{collections::HashMap, path::Path, str::FromStr, sync::Arc};
 
+use enum_iterator::Sequence;
 use reqwest::{
     Method, StatusCode,
     header::{ACCEPT, HeaderMap, HeaderName, InvalidHeaderValue},
@@ -25,7 +26,8 @@ use crate::{
 };
 
 /// Selects which cached metadata to refresh.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Sequence)]
+#[non_exhaustive]
 pub enum RefreshData {
     Tags,
     CustomFields,
@@ -39,8 +41,12 @@ pub enum RefreshData {
 #[derive(Debug, Clone)]
 pub struct PaperlessClient {
     client: reqwest::Client,
-    pub(crate) base_url: String,
+    pub(crate) base_url: Box<str>,
+    cached_data: Arc<CachedData>,
+}
 
+#[derive(Debug)]
+struct CachedData {
     correspondents: HashMap<CorrespondentId, Correspondent>,
     document_types: HashMap<DocumentTypeId, DocumentType>,
     tags: HashMap<TagId, Tag>,
@@ -85,18 +91,20 @@ impl PaperlessClient {
         );
 
         Ok(Self {
-            base_url: base_url.to_string(),
+            base_url: base_url.into(),
             client: reqwest::Client::builder()
                 .default_headers(headers_map)
                 .zstd(true)
                 .build()
                 .map_err(|err| err.to_string())?,
-            tags: HashMap::new(),
-            custom_fields: HashMap::new(),
-            correspondents: HashMap::new(),
-            document_types: HashMap::new(),
-            users: HashMap::new(),
-            storage_paths: HashMap::new(),
+            cached_data: Arc::new(CachedData {
+                tags: HashMap::new(),
+                custom_fields: HashMap::new(),
+                correspondents: HashMap::new(),
+                document_types: HashMap::new(),
+                users: HashMap::new(),
+                storage_paths: HashMap::new(),
+            }),
         })
     }
 
@@ -151,14 +159,7 @@ impl PaperlessClient {
     }
 
     pub async fn refresh_all(&mut self) -> Result<()> {
-        self.refresh([
-            RefreshData::Tags,
-            RefreshData::CustomFields,
-            RefreshData::Correspondents,
-            RefreshData::DocumentTypes,
-            RefreshData::Users,
-        ])
-        .await
+        self.refresh(enum_iterator::all::<RefreshData>()).await
     }
 
     /// Refresh selected cached metadata concurrently.
@@ -234,67 +235,16 @@ impl PaperlessClient {
             },
         )?;
 
-        if let Some(tags) = tags {
-            self.tags = tags;
-        }
-
-        if let Some(custom_fields) = custom_fields {
-            self.custom_fields = custom_fields;
-        }
-
-        if let Some(correspondents) = correspondents {
-            self.correspondents = correspondents;
-        }
-
-        if let Some(document_types) = document_types {
-            self.document_types = document_types;
-        }
-
-        if let Some(users) = users {
-            self.users = users;
-        }
-
-        if let Some(storage_paths) = storage_paths {
-            self.storage_paths = storage_paths;
-        }
+        self.cached_data = Arc::new(CachedData {
+            correspondents: correspondents.unwrap_or_default(),
+            document_types: document_types.unwrap_or_default(),
+            tags: tags.unwrap_or_default(),
+            custom_fields: custom_fields.unwrap_or_default(),
+            users: users.unwrap_or_default(),
+            storage_paths: storage_paths.unwrap_or_default(),
+        });
 
         Ok(())
-    }
-
-    /// Refresh tags.
-    #[inline]
-    pub async fn refresh_tags(&mut self) -> Result<()> {
-        self.refresh([RefreshData::Tags]).await
-    }
-
-    /// Refresh custom fields.
-    #[inline]
-    pub async fn refresh_custom_fields(&mut self) -> Result<()> {
-        self.refresh([RefreshData::CustomFields]).await
-    }
-
-    /// Refresh correspondents.
-    #[inline]
-    pub async fn refresh_correspondents(&mut self) -> Result<()> {
-        self.refresh([RefreshData::Correspondents]).await
-    }
-
-    /// Refresh document types.
-    #[inline]
-    pub async fn refresh_document_types(&mut self) -> Result<()> {
-        self.refresh([RefreshData::DocumentTypes]).await
-    }
-
-    /// Refresh users.
-    #[inline]
-    pub async fn refresh_users(&mut self) -> Result<()> {
-        self.refresh([RefreshData::Users]).await
-    }
-
-    /// Refresh storage paths.
-    #[inline]
-    pub async fn refresh_storage_paths(&mut self) -> Result<()> {
-        self.refresh([RefreshData::StoragePaths]).await
     }
 
     /// Get all documents with any of the given tags.
@@ -398,7 +348,7 @@ impl PaperlessClient {
             current_url = page.next.and_then(|next_url| {
                 // Extract just the path from the full URL
                 next_url
-                    .trim_start_matches(&self.base_url)
+                    .trim_start_matches(&*self.base_url)
                     .to_string()
                     .into()
             });
@@ -463,8 +413,8 @@ impl PaperlessClient {
         Ok(tasks)
     }
 
-    pub async fn get_workflows(&self) -> Result<Vec<Workflow>> {
-        self.fetch_all_pages("/api/workflows/").await
+    pub fn get_workflows(&self) -> impl Future<Output = Result<Vec<Workflow>>> {
+        self.fetch_all_pages("/api/workflows/")
     }
 
     /// Upload a document to Paperless.
@@ -507,51 +457,57 @@ impl PaperlessClient {
     #[inline]
     #[must_use]
     pub fn tags(&self) -> &HashMap<TagId, Tag> {
-        &self.tags
+        &self.cached_data.tags
     }
 
     #[inline]
     #[must_use]
     pub fn storage_paths(&self) -> &HashMap<StoragePathId, StoragePath> {
-        &self.storage_paths
+        &self.cached_data.storage_paths
     }
 
     #[must_use]
     pub fn find_tag_by_name(&self, name: &str) -> Option<&Tag> {
-        self.tags.values().find(|tag| tag.name == name)
+        self.cached_data.tags.values().find(|tag| tag.name == name)
     }
 
     #[inline]
     #[must_use]
     pub fn document_types(&self) -> &HashMap<DocumentTypeId, DocumentType> {
-        &self.document_types
+        &self.cached_data.document_types
     }
 
     #[must_use]
     pub fn find_document_type_by_name(&self, name: &str) -> Option<&DocumentType> {
-        self.document_types.values().find(|dt| dt.name == name)
+        self.cached_data
+            .document_types
+            .values()
+            .find(|dt| dt.name == name)
     }
 
     #[inline]
     #[must_use]
     pub fn correspondents(&self) -> &HashMap<CorrespondentId, Correspondent> {
-        &self.correspondents
+        &self.cached_data.correspondents
     }
 
     #[inline]
     #[must_use]
     pub fn custom_fields(&self) -> &HashMap<CustomFieldId, CustomField> {
-        &self.custom_fields
+        &self.cached_data.custom_fields
     }
 
     #[must_use]
     pub fn find_custom_field_by_name(&self, name: &str) -> Option<&CustomField> {
-        self.custom_fields.values().find(|field| field.name == name)
+        self.cached_data
+            .custom_fields
+            .values()
+            .find(|field| field.name == name)
     }
 
     #[inline]
     #[must_use]
     pub fn users(&self) -> &HashMap<UserId, User> {
-        &self.users
+        &self.cached_data.users
     }
 }
