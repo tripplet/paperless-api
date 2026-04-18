@@ -25,6 +25,7 @@ pub struct Workflow {
     pub actions: Vec<WorkflowAction>,
 }
 
+/// A trigger that determines when a workflow is executed.
 #[derive(Debug, Clone, Deserialize)]
 pub struct WorkflowTrigger {
     pub id: crate::id::WorkflowTriggerId,
@@ -33,6 +34,7 @@ pub struct WorkflowTrigger {
     pub trigger_type: WorkflowTriggerType,
 }
 
+/// An action that can be executed when a workflow is triggered.
 #[derive(Debug, Clone, Deserialize)]
 pub struct WorkflowAction {
     pub id: crate::id::WorkflowActionId,
@@ -43,6 +45,7 @@ pub struct WorkflowAction {
     pub webhook: Option<WebhookAction>,
 }
 
+/// The type of trigger that determines when a workflow is executed.
 #[derive(Debug, Clone, Serialize_repr, Deserialize_repr)]
 #[repr(u8)]
 pub enum WorkflowTriggerType {
@@ -52,6 +55,7 @@ pub enum WorkflowTriggerType {
     Scheduled = 4,
 }
 
+/// The type of action that is executed when a workflow is triggered.
 #[derive(Debug, Clone, Serialize_repr, Deserialize_repr)]
 #[repr(u8)]
 pub enum WorkflowActionType {
@@ -61,6 +65,7 @@ pub enum WorkflowActionType {
     Webhook = 4,
 }
 
+/// A webhook action that can be executed when a workflow is triggered.
 #[derive(Debug, Clone, Deserialize)]
 pub struct WebhookAction {
     pub id: crate::id::WebhookActionId,

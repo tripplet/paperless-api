@@ -1,5 +1,6 @@
 use serde::Deserialize;
 
+/// A document type
 #[derive(Debug, Clone, Deserialize)]
 pub struct DocumentType {
     pub id: crate::id::DocumentTypeId,

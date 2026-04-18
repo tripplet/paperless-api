@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::id::CustomFieldId;
+use crate::id::{CustomFieldId, SelectableOptionId};
 
 /// Custom field definition.
 #[derive(Debug, Clone, Deserialize)]
@@ -13,6 +13,8 @@ pub struct CustomField {
 
     /// Data type of the custom field.
     pub data_type: String,
+
+    pub extra_data: Option<CustomFieldExtraData>,
 }
 
 /// Custom field value of an existing document
@@ -23,4 +25,16 @@ pub struct DocumentCustomField {
 
     /// Value of the custom field.
     pub value: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct CustomFieldExtraData {
+    pub default_currency: Option<String>,
+    pub select_options: Option<Vec<SelectableOption>>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct SelectableOption {
+    pub id: SelectableOptionId,
+    pub label: String,
 }

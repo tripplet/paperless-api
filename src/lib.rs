@@ -12,6 +12,7 @@ pub mod storage_path;
 pub mod tag;
 pub mod task;
 pub mod user;
+pub mod util;
 pub mod workflow;
 
 pub use client::{PaperlessClient, RefreshData};

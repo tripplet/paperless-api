@@ -8,7 +8,7 @@
 //! The changes are only sent to the Paperless server when
 //! [`patch`](Document::patch) is called.
 
-use std::{fmt::Display, io, path::Path, sync::Arc, time::Duration};
+use std::{borrow::Cow, fmt::Display, sync::Arc, time::Duration};
 
 use chrono::{DateTime, NaiveDate, Utc};
 use derive_more::Display;
@@ -570,7 +570,7 @@ impl Document {
         &self,
         valid_for: Duration,
         version: ShareLinkFileVersion,
-    ) -> Result<ShareLink> {
+    ) -> Result<ShareLink<'_>> {
         let expires = Utc::now() + valid_for;
         self.generate_share_link_expires(expires, version).await
     }
@@ -580,7 +580,7 @@ impl Document {
         &self,
         expires: DateTime<Utc>,
         version: ShareLinkFileVersion,
-    ) -> Result<ShareLink> {
+    ) -> Result<ShareLink<'_>> {
         self.fail_if_deleted()?;
 
         let resp = self
@@ -604,7 +604,7 @@ impl Document {
             .await
             .map_err(|e| Error::Other(format!("Failed to generate share link: {e}")))?;
 
-        share_link.base_url.clone_from(&self.client.base_url);
+        share_link.base_url = Cow::Borrowed(&self.client.base_url);
         Ok(share_link)
     }
 }
