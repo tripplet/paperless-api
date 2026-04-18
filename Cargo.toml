@@ -6,6 +6,9 @@ version = "0.5.0"
 repository = "https://github.com/tripplet/paperless-api"
 edition = "2024"
 
+[package.metadata.docs.rs]
+features = ["tokio-fs"]
+
 [features]
 tokio-fs = ["dep:tokio"]
 
