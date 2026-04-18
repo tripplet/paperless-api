@@ -45,7 +45,7 @@ pub struct PaperlessClient {
     cached_data: Arc<CachedData>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct CachedData {
     correspondents: HashMap<CorrespondentId, Correspondent>,
     document_types: HashMap<DocumentTypeId, DocumentType>,
@@ -235,14 +235,28 @@ impl PaperlessClient {
             },
         )?;
 
-        self.cached_data = Arc::new(CachedData {
-            correspondents: correspondents.unwrap_or_default(),
-            document_types: document_types.unwrap_or_default(),
-            tags: tags.unwrap_or_default(),
-            custom_fields: custom_fields.unwrap_or_default(),
-            users: users.unwrap_or_default(),
-            storage_paths: storage_paths.unwrap_or_default(),
-        });
+        // Try to get a mutable reference to the cached data and update it
+        // If the cache is still referenced only this client will see the changes
+        let cached_data = Arc::make_mut(&mut self.cached_data);
+
+        if let Some(correspondents) = correspondents {
+            cached_data.correspondents = correspondents;
+        }
+        if let Some(document_types) = document_types {
+            cached_data.document_types = document_types;
+        }
+        if let Some(tags) = tags {
+            cached_data.tags = tags;
+        }
+        if let Some(custom_fields) = custom_fields {
+            cached_data.custom_fields = custom_fields;
+        }
+        if let Some(users) = users {
+            cached_data.users = users;
+        }
+        if let Some(storage_paths) = storage_paths {
+            cached_data.storage_paths = storage_paths;
+        }
 
         Ok(())
     }

@@ -2,7 +2,7 @@
 name = "paperless-api"
 description = "Async Paperless ngx API client"
 license = "MIT"
-version = "0.5.0"
+version = "0.6.0"
 repository = "https://github.com/tripplet/paperless-api"
 edition = "2024"
 
