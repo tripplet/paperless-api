@@ -10,13 +10,13 @@ use serde::Deserialize;
 use tracing::{debug, trace};
 
 use crate::{
-    Error, Result, User,
+    Error, Group, Result, User,
     correspondent::Correspondent,
     custom_field::CustomField,
     document::{Document, DocumentData},
     document_type::DocumentType,
     id::{
-        CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, StoragePathId, TagId, TaskId,
+        CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, GroupId, StoragePathId, TagId,
         UserId,
     },
     storage_path::StoragePath,
@@ -26,13 +26,17 @@ use crate::{
 };
 
 /// Selects which cached metadata to refresh.
+///
+/// Cached data is data which is rarly updated,
+/// refreshing it is normally not necessary on every request.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Sequence)]
 #[non_exhaustive]
-pub enum RefreshData {
+pub enum RefreshMetaData {
     Tags,
     CustomFields,
     Correspondents,
     DocumentTypes,
+    Groups,
     Users,
     StoragePaths,
 }
@@ -48,11 +52,12 @@ pub struct PaperlessClient {
 #[derive(Debug, Clone)]
 struct CachedData {
     correspondents: HashMap<CorrespondentId, Correspondent>,
-    document_types: HashMap<DocumentTypeId, DocumentType>,
-    tags: HashMap<TagId, Tag>,
     custom_fields: HashMap<CustomFieldId, CustomField>,
-    users: HashMap<UserId, User>,
+    document_types: HashMap<DocumentTypeId, DocumentType>,
+    groups: HashMap<GroupId, Group>,
     storage_paths: HashMap<StoragePathId, StoragePath>,
+    tags: HashMap<TagId, Tag>,
+    users: HashMap<UserId, User>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -98,12 +103,13 @@ impl PaperlessClient {
                 .build()
                 .map_err(|err| err.to_string())?,
             cached_data: Arc::new(CachedData {
-                tags: HashMap::new(),
                 custom_fields: HashMap::new(),
                 correspondents: HashMap::new(),
                 document_types: HashMap::new(),
-                users: HashMap::new(),
+                groups: HashMap::new(),
                 storage_paths: HashMap::new(),
+                tags: HashMap::new(),
+                users: HashMap::new(),
             }),
         })
     }
@@ -143,6 +149,12 @@ impl PaperlessClient {
             .collect())
     }
 
+    async fn load_groups(&self) -> Result<HashMap<GroupId, Group>> {
+        debug!("loading groups");
+        let groups: Vec<Group> = self.fetch_all_pages("/api/groups/").await?;
+        Ok(groups.into_iter().map(|group| (group.id, group)).collect())
+    }
+
     async fn load_users(&self) -> Result<HashMap<UserId, User>> {
         debug!("loading users");
         let users: Vec<User> = self.fetch_all_pages("/api/users/").await?;
@@ -158,85 +170,89 @@ impl PaperlessClient {
             .collect())
     }
 
+    /// Refresh and cache all metadata.
+    ///
+    /// Only updates the cache for this instance, cloned instances will not see the changes.
     pub async fn refresh_all(&mut self) -> Result<()> {
-        self.refresh(enum_iterator::all::<RefreshData>()).await
+        self.refresh(enum_iterator::all::<RefreshMetaData>()).await
     }
 
-    /// Refresh selected cached metadata concurrently.
-    pub async fn refresh(&mut self, data: impl IntoIterator<Item = RefreshData>) -> Result<()> {
+    /// Refresh and cache the selected metadata.
+    ///
+    /// Only updates the cache for this instance, cloned instances will not see the changes.
+    pub async fn refresh(&mut self, data: impl IntoIterator<Item = RefreshMetaData>) -> Result<()> {
         let mut refresh_tags = false;
         let mut refresh_custom_fields = false;
         let mut refresh_correspondents = false;
         let mut refresh_document_types = false;
+        let mut refresh_groups = false;
         let mut refresh_users = false;
         let mut refresh_storage_paths = false;
 
         for item in data {
             match item {
-                RefreshData::Tags => refresh_tags = true,
-                RefreshData::CustomFields => refresh_custom_fields = true,
-                RefreshData::Correspondents => refresh_correspondents = true,
-                RefreshData::DocumentTypes => refresh_document_types = true,
-                RefreshData::Users => refresh_users = true,
-                RefreshData::StoragePaths => refresh_storage_paths = true,
+                RefreshMetaData::Tags => refresh_tags = true,
+                RefreshMetaData::CustomFields => refresh_custom_fields = true,
+                RefreshMetaData::Correspondents => refresh_correspondents = true,
+                RefreshMetaData::DocumentTypes => refresh_document_types = true,
+                RefreshMetaData::Groups => refresh_groups = true,
+                RefreshMetaData::Users => refresh_users = true,
+                RefreshMetaData::StoragePaths => refresh_storage_paths = true,
             }
         }
 
-        let (tags, custom_fields, correspondents, document_types, users, storage_paths) = futures_util::try_join!(
+        let (tags, custom_fields, correspondents, document_types, groups, users, storage_paths) = futures_util::try_join!(
             async {
                 if refresh_tags {
-                    Ok::<Option<HashMap<TagId, Tag>>, Error>(Some(self.load_tags().await?))
+                    Ok(Some(self.load_tags().await?))
                 } else {
-                    Ok::<Option<HashMap<TagId, Tag>>, Error>(None)
+                    Ok::<Option<_>, Error>(None)
                 }
             },
             async {
                 if refresh_custom_fields {
-                    Ok::<Option<HashMap<CustomFieldId, CustomField>>, Error>(Some(
-                        self.load_custom_fields().await?,
-                    ))
+                    Ok(Some(self.load_custom_fields().await?))
                 } else {
-                    Ok::<Option<HashMap<CustomFieldId, CustomField>>, Error>(None)
+                    Ok(None)
                 }
             },
             async {
                 if refresh_correspondents {
-                    Ok::<Option<HashMap<CorrespondentId, Correspondent>>, Error>(Some(
-                        self.load_correspondents().await?,
-                    ))
+                    Ok(Some(self.load_correspondents().await?))
                 } else {
-                    Ok::<Option<HashMap<CorrespondentId, Correspondent>>, Error>(None)
+                    Ok(None)
                 }
             },
             async {
                 if refresh_document_types {
-                    Ok::<Option<HashMap<DocumentTypeId, DocumentType>>, Error>(Some(
-                        self.load_document_types().await?,
-                    ))
+                    Ok(Some(self.load_document_types().await?))
                 } else {
-                    Ok::<Option<HashMap<DocumentTypeId, DocumentType>>, Error>(None)
+                    Ok(None)
+                }
+            },
+            async {
+                if refresh_groups {
+                    Ok(Some(self.load_groups().await?))
+                } else {
+                    Ok(None)
                 }
             },
             async {
                 if refresh_users {
-                    Ok::<Option<HashMap<UserId, User>>, Error>(Some(self.load_users().await?))
+                    Ok(Some(self.load_users().await?))
                 } else {
-                    Ok::<Option<HashMap<UserId, User>>, Error>(None)
+                    Ok(None)
                 }
             },
             async {
                 if refresh_storage_paths {
-                    Ok::<Option<HashMap<StoragePathId, StoragePath>>, Error>(Some(
-                        self.load_storage_paths().await?,
-                    ))
+                    Ok(Some(self.load_storage_paths().await?))
                 } else {
-                    Ok::<Option<HashMap<StoragePathId, StoragePath>>, Error>(None)
+                    Ok(None)
                 }
             },
         )?;
 
-        // Try to get a mutable reference to the cached data and update it
-        // If the cache is still referenced only this client will see the changes
         let cached_data = Arc::make_mut(&mut self.cached_data);
 
         if let Some(correspondents) = correspondents {
@@ -244,6 +260,9 @@ impl PaperlessClient {
         }
         if let Some(document_types) = document_types {
             cached_data.document_types = document_types;
+        }
+        if let Some(groups) = groups {
+            cached_data.groups = groups;
         }
         if let Some(tags) = tags {
             cached_data.tags = tags;
