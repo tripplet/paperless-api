@@ -1,3 +1,5 @@
+//! Types related to document tags.
+
 use serde::Deserialize;
 
 use crate::{id::TagId, util::MatchAlgorithm};
@@ -22,12 +24,12 @@ pub struct Tag {
 
     /// Matching pattern for the tag.
     #[serde(rename = "match")]
-    pub match_pattern: Option<String>,
+    pub match_pattern: String,
 
     /// Matching algorithm for the tag.
-    pub matching_algorithm: Option<MatchAlgorithm>,
+    pub matching_algorithm: MatchAlgorithm,
 
-    /// Whether the tag is case-insensitive.
+    /// Whether the tag matching is case-insensitive.
     pub is_insensitive: bool,
 
     /// Whether the tag is an inbox tag.
@@ -39,7 +41,7 @@ pub struct Tag {
     /// Owner of the tag.
     pub owner: Option<crate::id::UserId>,
 
-    /// Whether the user can change the tag.
+    /// Whether the current user can change the tag.
     pub user_can_change: bool,
 
     /// Parent tag of this tag.

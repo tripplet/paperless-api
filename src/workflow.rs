@@ -1,3 +1,5 @@
+//! Types related to paperless workflows.
+
 use std::collections::HashMap;
 
 use serde::Deserialize;

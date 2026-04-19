@@ -1,3 +1,5 @@
+//! Types related to storage paths.
+
 use serde::Deserialize;
 
 use crate::util::MatchAlgorithm;

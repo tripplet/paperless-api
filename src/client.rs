@@ -1,3 +1,5 @@
+//! The central client for interacting with Paperless.
+
 use std::{collections::HashMap, path::Path, str::FromStr, sync::Arc};
 
 use enum_iterator::Sequence;
@@ -17,7 +19,7 @@ use crate::{
     document_type::DocumentType,
     id::{
         CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, GroupId, StoragePathId, TagId,
-        UserId,
+        TaskId, UserId,
     },
     storage_path::StoragePath,
     tag::Tag,

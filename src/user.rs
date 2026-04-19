@@ -1,11 +1,11 @@
-use serde::Deserialize;
+//! Types related to users.
 
-use crate::id::UserId;
+use serde::Deserialize;
 
 /// A paperless user
 #[derive(Debug, Clone, Deserialize)]
 pub struct User {
-    pub id: UserId,
+    pub id: crate::id::UserId,
     pub username: String,
     pub email: String,
     pub first_name: String,

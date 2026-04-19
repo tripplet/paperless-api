@@ -1,3 +1,5 @@
+//! Types related to share links.
+
 use std::borrow::Cow;
 
 use derive_more::Display;

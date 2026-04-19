@@ -1,3 +1,5 @@
+//! Types related to custom fields.
+
 use serde::{Deserialize, Serialize};
 
 use crate::id::{CustomFieldId, SelectableOptionId};

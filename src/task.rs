@@ -1,3 +1,5 @@
+//! Types related to tasks.
+
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 

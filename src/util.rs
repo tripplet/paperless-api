@@ -1,3 +1,5 @@
+//! Utility types.
+
 use derive_more::Display;
 use serde_repr::Deserialize_repr;
 

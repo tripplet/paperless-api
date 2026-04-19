@@ -154,7 +154,7 @@ impl Document {
         }
     }
 
-    /// Get the id of the document
+    /// Get the unique identifier of the document.
     #[inline]
     #[must_use]
     pub fn id(&self) -> DocumentId {
@@ -384,7 +384,7 @@ impl Document {
     /// Refresh the document from the server.
     ///
     /// This will discard any local changes and replace them with the server's state.
-    pub async fn reload(&mut self) -> Result<()> {
+    pub async fn refresh(&mut self) -> Result<()> {
         let document_data = self
             .client
             .as_ref()

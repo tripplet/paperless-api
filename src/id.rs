@@ -1,3 +1,5 @@
+//! Types related to paperless IDs.
+
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 
