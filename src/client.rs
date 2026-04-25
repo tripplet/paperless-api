@@ -12,7 +12,7 @@ use serde::Deserialize;
 use tracing::{debug, trace};
 
 use crate::{
-    Error, Group, Result, User,
+    Error, Group, Result, SavedView, User,
     correspondent::Correspondent,
     custom_field::CustomField,
     document::{Document, DocumentData},
@@ -498,6 +498,10 @@ impl PaperlessClient {
 
     pub fn get_workflows(&self) -> impl Future<Output = Result<Vec<Workflow>>> {
         self.fetch_all_pages("/api/workflows/", None)
+    }
+
+    pub fn get_saved_views(&self) -> impl Future<Output = Result<Vec<SavedView>>> {
+        self.fetch_all_pages("/api/saved_views/", None)
     }
 
     /// Upload a document to Paperless.

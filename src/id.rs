@@ -40,6 +40,7 @@ define_ids!(
     (DocumentTypeId, u32),
     (GroupId, u32),
     (NoteId, u32),
+    (SavedViewId, u32),
     (SelectableOptionId, String, noncopy),
     (ShareLinkId, u32),
     (StoragePathId, u32),
