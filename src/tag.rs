@@ -3,6 +3,7 @@
 use serde::Deserialize;
 
 use crate::{id::TagId, util::MatchAlgorithm};
+use crate::{id::TagId, permission::ItemPermissions, util::MatchAlgorithm};
 
 /// A document tag
 #[derive(Debug, Clone, Deserialize)]
@@ -36,17 +37,20 @@ pub struct Tag {
     pub is_inbox_tag: bool,
 
     /// Number of documents associated with this tag.
+    #[serde(default)]
     pub document_count: u32,
 
     /// Owner of the tag.
     pub owner: Option<crate::id::UserId>,
-
-    /// Whether the current user can change the tag.
-    pub user_can_change: bool,
 
     /// Parent tag of this tag.
     pub parent: Option<TagId>,
 
     /// Children tags of this tag.
     pub children: Vec<Box<Tag>>,
+
+    /// The permissions for this tag.
+    #[serde(flatten)]
+    pub permissions: ItemPermissions,
+}
 }

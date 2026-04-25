@@ -10,14 +10,26 @@ macro_rules! define_ids {
     };
 
     (@single ($name:ident, $type:ty)) => {
-        #[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+        #[derive(Clone, Copy, Display, Default, PartialEq, Eq, Hash, Deserialize, Serialize)]
         #[repr(transparent)]
         pub struct $name(pub $type);
+
+        impl std::fmt::Debug for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}({})", stringify!($name), self.0)
+            }
+        }
     };
     (@single ($name:ident, $type:ty, noncopy)) => {
-        #[derive(Debug, Display, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
+        #[derive(Clone, Display, Default, PartialEq, Eq, Hash, Deserialize, Serialize)]
         #[repr(transparent)]
         pub struct $name(pub $type);
+
+        impl std::fmt::Debug for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}({})", stringify!($name), self.0)
+            }
+        }
     };
 }
 

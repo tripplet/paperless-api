@@ -2,6 +2,7 @@
 
 use serde::Deserialize;
 
+use crate::permission::ItemPermissions;
 use crate::util::MatchAlgorithm;
 
 /// A correspondent
@@ -27,11 +28,14 @@ pub struct Correspondent {
     pub is_insensitive: bool,
 
     /// The number of documents associated with this correspondent.
+    #[serde(default)]
     pub document_count: u32,
 
     /// The user who owns this correspondent, if any.
     pub owner: Option<crate::id::UserId>,
 
-    /// Whether the current user can change this correspondent.
-    pub user_can_change: bool,
+    /// The permissions for this correspondent.
+    #[serde(flatten)]
+    pub permissions: ItemPermissions,
+}
 }

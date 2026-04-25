@@ -2,6 +2,7 @@
 
 use serde::Deserialize;
 
+use crate::permission::ItemPermissions;
 use crate::util::MatchAlgorithm;
 
 /// A storage path
@@ -17,8 +18,12 @@ pub struct StoragePath {
     pub matching_algorithm: MatchAlgorithm,
     pub is_insensitive: bool,
 
+    #[serde(default)]
     pub document_count: u32,
 
     pub owner: Option<crate::id::UserId>,
-    pub user_can_change: bool,
+
+    /// The permissions for this tag.
+    #[serde(flatten)]
+    pub permissions: ItemPermissions,
 }

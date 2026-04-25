@@ -30,6 +30,7 @@ use crate::{
         CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, StoragePathId, TagId, UserId,
     },
     note::Note,
+    permission::ItemPermissions,
     share_link::{ShareLink, ShareLinkFileVersion},
 };
 
@@ -47,6 +48,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Document {
     data: DocumentData,
+
     client: Arc<PaperlessClient>,
     content_is_truncated: bool,
     changed_values: BitFlags<ChangedAttributes>,
@@ -70,6 +72,9 @@ pub(crate) struct DocumentData {
     document_type: Option<DocumentTypeId>,
     storage_path: Option<StoragePathId>,
     notes: Vec<Note>,
+
+    #[serde(flatten)]
+    permissions: ItemPermissions,
 }
 
 #[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
@@ -268,6 +273,13 @@ impl Document {
     #[must_use]
     pub fn notes(&self) -> &[Note] {
         &self.data.notes
+    }
+
+    /// Get the permissions for the document.
+    #[inline]
+    #[must_use]
+    pub fn permissions(&self) -> &ItemPermissions {
+        &self.data.permissions
     }
 
     /// Add a tag to the document.
@@ -575,13 +587,13 @@ impl Document {
     }
 
     /// Generates a share link for the document that expires after the specified duration.
-    pub async fn generate_share_link_duration(
+    pub fn generate_share_link_duration(
         &self,
         valid_for: Duration,
         version: ShareLinkFileVersion,
-    ) -> Result<ShareLink<'_>> {
+    ) -> impl Future<Output = Result<ShareLink<'_>>> {
         let expires = Utc::now() + valid_for;
-        self.generate_share_link_expires(expires, version).await
+        self.generate_share_link_expires(expires, version)
     }
 
     /// Generates a share link for the document that expires at the specified time.

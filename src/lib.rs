@@ -8,6 +8,7 @@ pub mod document_type;
 pub mod group;
 pub mod id;
 pub mod note;
+pub mod permission;
 pub mod share_link;
 pub mod storage_path;
 pub mod tag;

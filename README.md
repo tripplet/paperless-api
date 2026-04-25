@@ -40,7 +40,7 @@ correspondents, and document types.
 You can refresh the caches individually or all:
 
 ```rust,no_run
-use paperless_api::{PaperlessClient, RefreshData};
+use paperless_api::{PaperlessClient, RefreshMetaData};
 
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut client = PaperlessClient::new(
@@ -51,9 +51,9 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     client
         .refresh([
-            RefreshData::Tags,
-            RefreshData::CustomFields,
-            RefreshData::Correspondents,
+            RefreshMetaData::Tags,
+            RefreshMetaData::CustomFields,
+            RefreshMetaData::Correspondents,
         ])
         .await?;
     

@@ -1,7 +1,8 @@
 //! Types related to document types.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
+use crate::permission::ItemPermissions;
 use crate::util::MatchAlgorithm;
 
 /// A document type
@@ -27,11 +28,14 @@ pub struct DocumentType {
     pub is_insensitive: Option<bool>,
 
     /// Number of documents with this type.
+    #[serde(default)]
     pub document_count: u32,
 
     /// Owner of the document type.
     pub owner: Option<crate::id::UserId>,
 
-    /// Whether the current user can change this document type.
-    pub user_can_change: bool,
+    /// The permissions for this tag.
+    #[serde(flatten)]
+    pub permissions: ItemPermissions,
+}
 }
