@@ -16,7 +16,15 @@ macro_rules! define_ids {
 
         impl std::fmt::Debug for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                write!(f, "{}({})", stringify!($name), self.0)
+                write!(f, "{}({})", stringify!($name), *self)
+            }
+        }
+
+        impl std::ops::Deref for $name {
+            type Target = $type;
+
+            fn deref(&self) -> &Self::Target {
+                &self.0
             }
         }
     };
@@ -27,7 +35,15 @@ macro_rules! define_ids {
 
         impl std::fmt::Debug for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                write!(f, "{}({})", stringify!($name), self.0)
+                write!(f, "{}({})", stringify!($name), *self)
+            }
+        }
+
+        impl std::ops::Deref for $name {
+            type Target = $type;
+
+            fn deref(&self) -> &Self::Target {
+                &self.0
             }
         }
     };
