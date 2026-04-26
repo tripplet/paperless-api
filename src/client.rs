@@ -89,6 +89,31 @@ impl PaperlessClient {
         token: &str,
         headers: Option<&HashMap<String, String>>,
     ) -> std::result::Result<Self, String> {
+        Self::new_with_builder(
+            base_url,
+            token,
+            headers,
+            reqwest::Client::builder().zstd(true),
+        )
+    }
+
+    /// Create a new Paperless client.
+    ///
+    /// Provide a [`reqwest::ClientBuilder`] to customize the HTTP client,
+    /// such as adding custom headers or disabling compression.
+    ///
+    /// # Arguments
+    ///
+    /// * `base_url` - The base URL of the Paperless API.
+    /// * `token` - The authentication token for the Paperless API.
+    /// * `headers` - Optional additional headers to include in requests.
+    /// * `client_builder` - [`reqwest::ClientBuilder`] to use for creating the HTTP client.
+    pub fn new_with_builder(
+        base_url: &str,
+        token: &str,
+        headers: Option<&HashMap<String, String>>,
+        client_builder: reqwest::ClientBuilder,
+    ) -> std::result::Result<Self, String> {
         let mut headers_map = HeaderMap::new();
 
         // Add additional headers if provided
@@ -114,9 +139,8 @@ impl PaperlessClient {
         Ok(Self {
             request_full_permissions: false,
             base_url: base_url.into(),
-            client: reqwest::Client::builder()
+            client: client_builder
                 .default_headers(headers_map)
-                .zstd(true)
                 .build()
                 .map_err(|err| err.to_string())?,
             cached_data: Arc::new(CachedData {
