@@ -24,6 +24,7 @@ use crate::{
     storage_path::StoragePath,
     tag::Tag,
     task::Task,
+    util,
     workflow::Workflow,
 };
 
@@ -526,6 +527,19 @@ impl PaperlessClient {
 
     pub fn get_saved_views(&self) -> impl Future<Output = Result<Vec<SavedView>>> {
         self.fetch_all_pages("/api/saved_views/", None)
+    }
+
+    pub async fn get_statistics(&self) -> Result<util::Statistics> {
+        self.request(Method::GET, "/api/statistics/", None)
+            .await
+            .map_err(|e| Error::Other(format!("Failed to send request: {e}")))?
+            .json()
+            .await
+            .map_err(|e| Error::Other(format!("Failed to parse response body: {e}")))
+    }
+
+    pub fn query_documents(&self, query: DocumentQuery) -> Result<Vec<Document>> {
+        todo!()
     }
 
     /// Upload a document to Paperless.
