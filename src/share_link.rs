@@ -1,6 +1,6 @@
 //! Types related to share links.
 
-use std::borrow::Cow;
+use std::sync::Arc;
 
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "lowercase")]
 pub enum ShareLinkFileVersion {
     /// The "current" file version in the paperless archive.
-    /// This version might be modified by paperless e.g. via OCR processing.
+    /// This version might be modified by paperless.
     Archive,
 
     /// The original file version initially uploaded to paperless.
@@ -19,7 +19,7 @@ pub enum ShareLinkFileVersion {
 
 /// A share link
 #[derive(Debug, Clone, Deserialize)]
-pub struct ShareLink<'a> {
+pub struct ShareLink {
     /// Unique identifier of the share link.
     pub id: crate::id::ShareLinkId,
 
@@ -33,21 +33,12 @@ pub struct ShareLink<'a> {
     pub slug: String,
 
     #[serde(skip)]
-    pub(crate) base_url: Cow<'a, str>,
+    pub(crate) base_url: Arc<str>,
 }
 
-impl ShareLink<'_> {
+impl ShareLink {
     #[must_use]
     pub fn url(&self) -> String {
         format!("{}/share/{}", self.base_url, self.slug)
-    }
-
-    /// Returns an owned version of this share link.
-    #[must_use]
-    pub fn owned(self) -> ShareLink<'static> {
-        ShareLink {
-            base_url: Cow::Owned(self.base_url.into_owned()),
-            ..self
-        }
     }
 }

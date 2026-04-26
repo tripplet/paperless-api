@@ -53,7 +53,7 @@ pub struct PaperlessClient {
     /// Whether to request full permissions data for items.
     pub request_full_permissions: bool,
 
-    pub(crate) base_url: Box<str>,
+    pub(crate) base_url: Arc<str>,
 
     client: reqwest::Client,
     cached_data: Arc<CachedData>,
