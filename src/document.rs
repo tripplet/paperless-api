@@ -63,7 +63,7 @@ pub(crate) struct DocumentData {
     added: DateTime<Utc>,
     created: Option<NaiveDate>,
     modified: DateTime<Utc>,
-    page_count: u32,
+    page_count: Option<u32>,
     title: String,
     content: String,
     tags: Vec<TagId>,
@@ -233,7 +233,7 @@ impl Document {
     /// Get the number of pages in the document.
     #[inline]
     #[must_use]
-    pub fn page_count(&self) -> u32 {
+    pub fn page_count(&self) -> Option<u32> {
         self.data.page_count
     }
 
