@@ -53,7 +53,7 @@ pub struct Document {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub(crate) struct DocumentData {
+pub struct DocumentData {
     id: DocumentId,
     archive_serial_number: Option<ArchiveSerialNumber>,
     original_file_name: String,
