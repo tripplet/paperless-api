@@ -90,7 +90,7 @@ impl PaperlessClient {
         token: &str,
         headers: Option<&HashMap<String, String>>,
     ) -> std::result::Result<Self, String> {
-        Self::new_with_builder(
+        Self::new_with_client(
             base_url,
             token,
             headers,
@@ -109,7 +109,7 @@ impl PaperlessClient {
     /// * `token` - The authentication token for the Paperless API.
     /// * `headers` - Optional additional headers to include in requests.
     /// * `client_builder` - [`reqwest::ClientBuilder`] to use for creating the HTTP client.
-    pub fn new_with_builder(
+    pub fn new_with_client(
         base_url: &str,
         token: &str,
         headers: Option<&HashMap<String, String>>,
@@ -535,11 +535,18 @@ impl PaperlessClient {
             .map_err(|e| Error::Other(format!("Failed to send request: {e}")))?
             .json()
             .await
-            .map_err(|e| Error::Other(format!("Failed to parse response body: {e}")))
+            .map_err(|e| Error::Other(format!("Failed to parse response body: {e:?}")))
     }
 
-    pub fn query_documents(&self, query: DocumentQuery) -> Result<Vec<Document>> {
-        todo!()
+    pub async fn get_status(&self) -> Result<util::ServerStatus> {
+        self.request(Method::GET, "/api/status/", None)
+            .await
+            .map_err(|e| Error::Other(format!("Failed to send request: {e}")))?
+            .json()
+            .await
+            .map_err(|e| Error::Other(format!("Failed to parse response body: {e:?}")))
+    }
+
     }
 
     /// Upload a document to Paperless.
