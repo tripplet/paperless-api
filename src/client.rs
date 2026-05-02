@@ -13,16 +13,16 @@ use tracing::{debug, trace};
 
 use crate::{
     Error, Group, Result, SavedView, User,
-    correspondent::Correspondent,
-    custom_field::CustomField,
     document::{Document, DocumentData},
-    document_type::DocumentType,
+    dto::CreateDtoObject,
     id::{
         CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, GroupId, StoragePathId, TagId,
         TaskId, UserId,
     },
-    storage_path::StoragePath,
-    tag::Tag,
+    metadata::{
+        correspondent::Correspondent, custom_field::CustomField, document_type::DocumentType,
+        storage_path::StoragePath, tag::Tag,
+    },
     task::Task,
     util,
     workflow::Workflow,
@@ -419,6 +419,16 @@ impl PaperlessClient {
         Ok(resp)
     }
 
+    pub(crate) async fn request_with_body(
+        &self,
+        method: Method,
+        endpoint: &str,
+        body: &impl serde::Serialize,
+    ) -> Result<reqwest::Response> {
+        let body = serde_json::to_value(body).map_err(|e| Error::Other(e.to_string()))?;
+        self.request(method, endpoint, Some(&body)).await
+    }
+
     pub(crate) async fn fetch_all_pages<T: for<'de> Deserialize<'de>>(
         &self,
         endpoint: &str,
@@ -494,7 +504,7 @@ impl PaperlessClient {
                     serde_urlencoded::to_string(&query)
                         .map_err(|e| Error::Other(format!("Failed to serialize query: {e}")))?
                 ),
-                None,
+                None::<&serde_json::Value>,
             )
             .await?;
 
@@ -547,6 +557,23 @@ impl PaperlessClient {
             .map_err(|e| Error::Other(format!("Failed to parse response body: {e:?}")))
     }
 
+    /// Create a new item in Paperless.
+    ///
+    /// All structs which implement [`CreateDtoObject`] can be used as `new_item`.
+    ///
+    /// Returns the created item
+    pub async fn create<T>(&self, new_item: T) -> Result<T::BaseType>
+    where
+        T: CreateDtoObject,
+    {
+        let url = format!("/api/{}/", T::endpoint());
+        let resp = self
+            .request_with_body(Method::POST, &url, &new_item)
+            .await?;
+
+        resp.json::<T::BaseType>()
+            .await
+            .map_err(|e| Error::Other(format!("Failed to parse response body: {e}")))
     }
 
     /// Upload a document to Paperless.

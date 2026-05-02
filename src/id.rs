@@ -1,4 +1,8 @@
-//! Types related to paperless IDs.
+//! Paperless ID types.
+//!
+//! Paperless uses numeric IDs for most entities.
+//! To avoid confusion, ID types are defined as wrappers around the underlying numeric type.
+//! e.g. DocumentId(u32)
 
 use derive_more::Display;
 use serde::{Deserialize, Serialize};

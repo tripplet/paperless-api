@@ -1,0 +1,15 @@
+[package]
+name = "paperless-api-macros"
+description = "Macros for the paperless-api crate"
+version = "0.7.0"
+repository = "https://github.com/tripplet/paperless-api"
+edition = "2024"
+license = "MIT"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = { version = "2.0", features = ["full", "derive"] }

@@ -1,12 +1,15 @@
 //! Types related to storage paths.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-use crate::permission::ItemPermissions;
-use crate::util::MatchAlgorithm;
+use paperless_api_macros::CreateDto;
+
+use super::MatchAlgorithm;
+use super::permission::ItemPermissions;
 
 /// A storage path
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, CreateDto)]
+#[api_info(endpoint = "storage_paths")]
 pub struct StoragePath {
     pub id: crate::id::StoragePathId,
     pub slug: String,

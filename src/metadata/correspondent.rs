@@ -1,17 +1,22 @@
 //! Types related to correspondents.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-use crate::permission::ItemPermissions;
-use crate::util::MatchAlgorithm;
+use paperless_api_macros::CreateDto;
+
+use super::MatchAlgorithm;
+use super::permission::ItemPermissions;
 
 /// A correspondent
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize, CreateDto)]
+#[api_info(endpoint = "correspondents")]
 pub struct Correspondent {
     /// Unique identifier of the correspondent.
+    #[dto(skip)]
     pub id: crate::id::CorrespondentId,
 
     /// Slug of the correspondent.
+    #[dto(skip)]
     pub slug: String,
 
     /// Name of the correspondent.
@@ -28,14 +33,16 @@ pub struct Correspondent {
     pub is_insensitive: bool,
 
     /// The number of documents associated with this correspondent.
+    #[dto(skip)]
     #[serde(default)]
     pub document_count: u32,
 
     /// The user who owns this correspondent, if any.
+    #[dto(skip)]
     pub owner: Option<crate::id::UserId>,
 
     /// The permissions for this correspondent.
+    #[dto(skip)]
     #[serde(flatten)]
     pub permissions: ItemPermissions,
-}
 }

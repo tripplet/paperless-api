@@ -1,17 +1,22 @@
 //! Types related to document tags.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-use crate::{id::TagId, util::MatchAlgorithm};
-use crate::{id::TagId, permission::ItemPermissions, util::MatchAlgorithm};
+use paperless_api_macros::CreateDto;
+
+use super::MatchAlgorithm;
+use crate::id::TagId;
 
 /// A document tag
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize, CreateDto)]
+#[api_info(endpoint = "tags")]
 pub struct Tag {
     /// Unique identifier of the tag.
+    #[dto(skip)]
     pub id: TagId,
 
     /// Slug of the tag.
+    #[dto(skip)]
     pub slug: String,
 
     /// Name of the tag.
@@ -21,6 +26,7 @@ pub struct Tag {
     pub color: String,
 
     /// Color of the text on the tag, in hex format.
+    #[dto(skip)]
     pub text_color: String,
 
     /// Matching pattern for the tag.
@@ -37,20 +43,23 @@ pub struct Tag {
     pub is_inbox_tag: bool,
 
     /// Number of documents associated with this tag.
+    #[dto(skip)]
     #[serde(default)]
     pub document_count: u32,
 
     /// Owner of the tag.
+    #[dto(skip)]
     pub owner: Option<crate::id::UserId>,
 
     /// Parent tag of this tag.
     pub parent: Option<TagId>,
 
     /// Children tags of this tag.
+    #[dto(skip)]
     pub children: Vec<Box<Tag>>,
 
     /// The permissions for this tag.
+    #[dto(skip)]
     #[serde(flatten)]
-    pub permissions: ItemPermissions,
-}
+    pub permissions: super::permission::ItemPermissions,
 }

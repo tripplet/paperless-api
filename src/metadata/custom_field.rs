@@ -2,12 +2,16 @@
 
 use serde::{Deserialize, Serialize};
 
+use paperless_api_macros::CreateDto;
+
 use crate::id::{CustomFieldId, SelectableOptionId};
 
 /// Custom field definition.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize, CreateDto)]
+#[api_info(endpoint = "custom_fields")]
 pub struct CustomField {
     /// Unique identifier of the custom field.
+    #[dto(skip)]
     pub id: CustomFieldId,
 
     /// Name of the custom field.
@@ -20,6 +24,7 @@ pub struct CustomField {
     pub extra_data: Option<CustomFieldExtraData>,
 
     /// Number of documents that have this custom field set.
+    #[dto(skip)]
     #[serde(default)]
     pub document_count: u32,
 }
@@ -46,9 +51,10 @@ pub struct SelectableOption {
     pub label: String,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum CustomFieldDataType {
+    #[default]
     String,
     Url,
     Date,

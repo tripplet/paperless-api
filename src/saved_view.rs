@@ -1,12 +1,15 @@
 //! Types related to saved views in the paperless UI.
 
 use derive_more::Display;
+use paperless_api_macros::{CreateDto, UpdateDto};
 use serde::{Deserialize, Serialize};
 
 /// A saved view in the paperless UI.
-#[derive(Debug, Default, Clone, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize, CreateDto, UpdateDto)]
+#[api_info(endpoint = "saved_views")]
 pub struct SavedView {
     /// The ID of the saved view.
+    #[dto(skip)]
     pub id: crate::id::SavedViewId,
 
     /// The name of the saved view.
@@ -37,9 +40,11 @@ pub struct SavedView {
     pub page_size: Option<u32>,
 
     /// The user who owns the saved view.
+    #[dto(skip)]
     pub owner: Option<crate::id::UserId>,
 
     /// Whether the user can change the saved view.
+    #[dto(skip)]
     pub user_can_change: bool,
 }
 
@@ -105,7 +110,7 @@ pub enum FilterRuleType {
     DoesNotHaveCustomFields = 40,
     DoesNotHaveCustomField = 41,
     CustomFieldQuery = 42,
-    CreatedTo = 43,
+    CreateDto = 43,
     CreatedBy = 44,
     AddedTo = 45,
     AddedBy = 46,

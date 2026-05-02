@@ -2,16 +2,21 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::permission::ItemPermissions;
-use crate::util::MatchAlgorithm;
+use paperless_api_macros::CreateDto;
+
+use super::MatchAlgorithm;
+use super::permission::ItemPermissions;
 
 /// A document type
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize, CreateDto)]
+#[api_info(endpoint = "document_types")]
 pub struct DocumentType {
     /// Unique identifier of the document type.
+    #[dto(skip)]
     pub id: crate::id::DocumentTypeId,
 
     /// Slug of the document type.
+    #[dto(skip)]
     pub slug: String,
 
     /// Name of the document type.
@@ -28,14 +33,16 @@ pub struct DocumentType {
     pub is_insensitive: Option<bool>,
 
     /// Number of documents with this type.
+    #[dto(skip)]
     #[serde(default)]
     pub document_count: u32,
 
     /// Owner of the document type.
+    #[dto(skip)]
     pub owner: Option<crate::id::UserId>,
 
     /// The permissions for this tag.
+    #[dto(skip)]
     #[serde(flatten)]
     pub permissions: ItemPermissions,
-}
 }

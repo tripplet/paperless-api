@@ -1,33 +1,24 @@
 #![doc = include_str!("../README.md")]
 
 pub mod client;
-pub mod correspondent;
-pub mod custom_field;
 pub mod document;
-pub mod document_type;
+pub mod dto;
 pub mod group;
 pub mod id;
+pub mod metadata;
 pub mod note;
-pub mod permission;
 pub mod saved_view;
 pub mod share_link;
-pub mod storage_path;
-pub mod tag;
 pub mod task;
 pub mod user;
 pub mod util;
 pub mod workflow;
 
 pub use client::{PaperlessClient, RefreshMetaData};
-pub use correspondent::Correspondent;
-pub use custom_field::{CustomField, DocumentCustomField};
 pub use document::Document;
-pub use document_type::DocumentType;
 pub use group::Group;
-pub use saved_view::SavedView;
+pub use saved_view::{CreateSavedView, SavedView, UpdateSavedView};
 pub use share_link::ShareLink;
-pub use storage_path::StoragePath;
-pub use tag::Tag;
 pub use task::Task;
 pub use user::User;
 pub use workflow::Workflow;

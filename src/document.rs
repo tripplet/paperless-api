@@ -24,13 +24,14 @@ use serde::{Deserialize, Serialize};
 use tokio::io::AsyncWriteExt;
 
 use crate::{
-    DocumentCustomField, Error, Result,
+    Error, Result,
     client::PaperlessClient,
     id::{
         CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, StoragePathId, TagId, UserId,
     },
+    metadata::custom_field::DocumentCustomField,
+    metadata::permission::ItemPermissions,
     note::Note,
-    permission::ItemPermissions,
     share_link::{ShareLink, ShareLinkFileVersion},
 };
 
@@ -481,10 +482,10 @@ impl Document {
         };
 
         self.client
-            .request(
+            .request_with_body(
                 Method::PATCH,
                 &format!("/api/documents/{}/", self.data.id),
-                Some(&serde_json::to_value(patch).expect("Patch request")),
+                &patch,
             )
             .await?;
 
