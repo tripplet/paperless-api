@@ -30,8 +30,6 @@ use crate::{
 };
 
 const QUERY_PARAM_FULL_PERMISSIONS: &str = "full_perms";
-const QUERY_PARAM_TRUNCATE_CONTENT: &str = "truncate_content";
-const QUERY_PARAM_TAGS_ID_IN: &str = "tags__id__in";
 
 /// Selects which cached metadata to refresh.
 ///
