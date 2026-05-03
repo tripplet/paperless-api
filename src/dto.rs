@@ -2,17 +2,23 @@
 
 use serde::Serialize;
 
-pub trait CreateDtoObject: Serialize {
+use crate::id::PaperlessId;
+
+pub trait CreateDtoObject: Serialize {}
+
+pub trait Item {
+    type Id: PaperlessId;
     type BaseType: serde::de::DeserializeOwned;
+    type CreateDto: CreateDtoObject;
+    type UpdateDto: UpdateDtoObject;
 
     fn endpoint() -> &'static str;
+
+    fn id(&self) -> Self::Id;
 }
 
 /// Marker trait for update DTOs.
-pub trait UpdateDto {
-    // Patches the entity with the given ID using the data from this DTO.
-    //fn patch(&self, client: &PaperlessClient) -> impl std::future::Future<()>;
-}
+pub trait UpdateDtoObject: Serialize {}
 
 // #[cfg(test)]
 // mod tests {

@@ -2,13 +2,13 @@
 
 use serde::{Deserialize, Serialize};
 
-use paperless_api_macros::CreateDto;
+use paperless_api_macros::{CreateDto, Item, UpdateDto};
 
 use super::MatchAlgorithm;
 use crate::id::TagId;
 
 /// A document tag
-#[derive(Debug, Default, Clone, Deserialize, Serialize, CreateDto)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize, CreateDto, UpdateDto, Item)]
 #[api_info(endpoint = "tags")]
 pub struct Tag {
     /// Unique identifier of the tag.

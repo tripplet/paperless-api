@@ -8,13 +8,14 @@ use reqwest::{
     header::{ACCEPT, HeaderMap, HeaderName, InvalidHeaderValue},
     multipart,
 };
-use serde::Deserialize;
+use serde::{Deserialize, de::DeserializeOwned};
 use tracing::{debug, trace};
 
 use crate::{
     Error, Group, Result, SavedView, User,
     document::{Document, DocumentData},
-    dto::CreateDtoObject,
+    document_query::DocumentQueryBuilder,
+    dto::Item,
     id::{
         CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, GroupId, StoragePathId, TagId,
         TaskId, UserId,
@@ -156,74 +157,25 @@ impl PaperlessClient {
         })
     }
 
-    /// Sets whether to request full permissions data for items.
+    /// Sets whether to request full permissions data for items during refresh.
+    ///
+    /// If not enabled only simple permission data is loaded.
+    /// See [`ItemPermissions`](crate::metadata::permission::ItemPermissions) for more details.
     #[must_use]
-    pub fn request_full_permissions(mut self, req: bool) -> Self {
+    pub fn with_full_permissions(mut self, req: bool) -> Self {
         self.request_full_permissions = req;
         self
     }
 
-    async fn load_tags(&self) -> Result<HashMap<TagId, Tag>> {
-        debug!("loading tags");
-        let tags: Vec<Tag> = self
-            .fetch_all_pages("/api/tags/", self.permissions_query_param())
+    /// Loads all items of the given type from the API.
+    async fn load_items<T: Item + DeserializeOwned>(&self) -> Result<HashMap<T::Id, T>> {
+        debug!("Loading {}", T::endpoint());
+        let endpoint = format!("/api/{}/", T::endpoint());
+
+        let items: Vec<T> = self
+            .fetch_all_pages(&endpoint, self.permissions_query_param())
             .await?;
-        Ok(tags.into_iter().map(|tag| (tag.id, tag)).collect())
-    }
-
-    async fn load_custom_fields(&self) -> Result<HashMap<CustomFieldId, CustomField>> {
-        debug!("loading custom fields");
-        let custom_fields: Vec<CustomField> =
-            self.fetch_all_pages("/api/custom_fields/", None).await?;
-        Ok(custom_fields
-            .into_iter()
-            .map(|custom_field| (custom_field.id, custom_field))
-            .collect())
-    }
-
-    async fn load_correspondents(&self) -> Result<HashMap<CorrespondentId, Correspondent>> {
-        debug!("loading correspondents");
-        let correspondents: Vec<Correspondent> = self
-            .fetch_all_pages("/api/correspondents/", self.permissions_query_param())
-            .await?;
-        Ok(correspondents
-            .into_iter()
-            .map(|correspondent| (correspondent.id, correspondent))
-            .collect())
-    }
-
-    async fn load_document_types(&self) -> Result<HashMap<DocumentTypeId, DocumentType>> {
-        debug!("loading document types");
-        let document_types: Vec<DocumentType> = self
-            .fetch_all_pages("/api/document_types/", self.permissions_query_param())
-            .await?;
-        Ok(document_types
-            .into_iter()
-            .map(|document_type| (document_type.id, document_type))
-            .collect())
-    }
-
-    async fn load_groups(&self) -> Result<HashMap<GroupId, Group>> {
-        debug!("loading groups");
-        let groups: Vec<Group> = self.fetch_all_pages("/api/groups/", None).await?;
-        Ok(groups.into_iter().map(|group| (group.id, group)).collect())
-    }
-
-    async fn load_users(&self) -> Result<HashMap<UserId, User>> {
-        debug!("loading users");
-        let users: Vec<User> = self.fetch_all_pages("/api/users/", None).await?;
-        Ok(users.into_iter().map(|user| (user.id, user)).collect())
-    }
-
-    async fn load_storage_paths(&self) -> Result<HashMap<StoragePathId, StoragePath>> {
-        debug!("loading storage paths");
-        let storage_paths: Vec<StoragePath> = self
-            .fetch_all_pages("/api/storage_paths/", self.permissions_query_param())
-            .await?;
-        Ok(storage_paths
-            .into_iter()
-            .map(|storage_path| (storage_path.id, storage_path))
-            .collect())
+        Ok(items.into_iter().map(|item| (item.id(), item)).collect())
     }
 
     fn permissions_query_param(&self) -> Option<&'static [(&'static str, &'static str)]> {
@@ -269,49 +221,49 @@ impl PaperlessClient {
                 futures_util::try_join!(
                     async {
                         if selected.contains(&RefreshMetaData::Tags) {
-                            Ok(Some(client.load_tags().await?))
+                            Ok(Some(client.load_items::<Tag>().await?))
                         } else {
                             Ok::<Option<_>, Error>(None)
                         }
                     },
                     async {
                         if selected.contains(&RefreshMetaData::CustomFields) {
-                            Ok(Some(client.load_custom_fields().await?))
+                            Ok(Some(client.load_items::<CustomField>().await?))
                         } else {
                             Ok(None)
                         }
                     },
                     async {
                         if selected.contains(&RefreshMetaData::Correspondents) {
-                            Ok(Some(client.load_correspondents().await?))
+                            Ok(Some(client.load_items::<Correspondent>().await?))
                         } else {
                             Ok(None)
                         }
                     },
                     async {
                         if selected.contains(&RefreshMetaData::DocumentTypes) {
-                            Ok(Some(client.load_document_types().await?))
+                            Ok(Some(client.load_items::<DocumentType>().await?))
                         } else {
                             Ok(None)
                         }
                     },
                     async {
                         if selected.contains(&RefreshMetaData::Groups) {
-                            Ok(Some(client.load_groups().await?))
+                            Ok(Some(client.load_items::<Group>().await?))
                         } else {
                             Ok(None)
                         }
                     },
                     async {
                         if selected.contains(&RefreshMetaData::Users) {
-                            Ok(Some(client.load_users().await?))
+                            Ok(Some(client.load_items::<User>().await?))
                         } else {
                             Ok(None)
                         }
                     },
                     async {
                         if selected.contains(&RefreshMetaData::StoragePaths) {
-                            Ok(Some(client.load_storage_paths().await?))
+                            Ok(Some(client.load_items::<StoragePath>().await?))
                         } else {
                             Ok(None)
                         }
@@ -320,13 +272,13 @@ impl PaperlessClient {
 
             let cached_data = Arc::make_mut(&mut client.cached_data);
 
+            if let Some(value) = custom_fields { cached_data.custom_fields = value; }
             if let Some(value) = correspondents { cached_data.correspondents = value; }
             if let Some(value) = document_types { cached_data.document_types = value; }
             if let Some(value) = groups { cached_data.groups = value; }
-            if let Some(value) = tags { cached_data.tags = value; }
-            if let Some(value) = custom_fields { cached_data.custom_fields = value; }
-            if let Some(value) = users { cached_data.users = value; }
             if let Some(value) = storage_paths { cached_data.storage_paths = value; }
+            if let Some(value) = tags { cached_data.tags = value; }
+            if let Some(value) = users { cached_data.users = value; }
 
             Ok(())
         }
@@ -334,32 +286,38 @@ impl PaperlessClient {
         inner(self, &mut data.into_iter()).await
     }
 
-    /// Get all documents with any of the given tags.
-    pub async fn get_documents_by_tags(
-        &self,
-        tag_ids: &[TagId],
-        truncate_content: bool,
-    ) -> Result<Vec<Document>> {
-        let tag_id_str = tag_ids
+    pub async fn query_documents(&self, query: DocumentQueryBuilder) -> Result<Vec<Document>> {
+        let full_content = query.full_content;
+
+        let query_params = query.build();
+        let query_vec: Vec<_> = query_params
+            .query
             .iter()
-            .map(|tag_id| tag_id.0.to_string())
-            .collect::<Vec<_>>()
-            .join(",");
+            .map(|(k, v)| (*k, v.as_str()))
+            .collect();
+        let query_slice = query_vec.as_slice();
 
         let documents: Vec<_> = self
-            .fetch_all_pages::<DocumentData>(
-                "/api/documents/",
-                Some(&[
-                    (QUERY_PARAM_TAGS_ID_IN, &tag_id_str),
-                    (QUERY_PARAM_TRUNCATE_CONTENT, &format!("{truncate_content}")),
-                ]),
-            )
+            .fetch_all_pages::<DocumentData>("/api/documents/", Some(query_slice))
             .await?
             .into_iter()
-            .map(|data| Document::new(data, Arc::new(self.clone()), truncate_content))
+            .map(|data| Document::new(data, Arc::new(self.clone()), !full_content))
             .collect();
 
         Ok(documents)
+    }
+
+    /// Get all documents with any of the given tags.
+    pub fn get_documents_by_tags(
+        &self,
+        tag_ids: &[TagId],
+        truncate_content: bool,
+    ) -> impl Future<Output = Result<Vec<Document>>> {
+        let query = DocumentQueryBuilder::default()
+            .full_content(!truncate_content)
+            .tags_id_in(tag_ids.iter().copied().collect());
+
+        self.query_documents(query)
     }
 
     pub(crate) async fn get_document_data_by_id(&self, id: DocumentId) -> Result<DocumentData> {
@@ -562,10 +520,7 @@ impl PaperlessClient {
     /// All structs which implement [`CreateDtoObject`] can be used as `new_item`.
     ///
     /// Returns the created item
-    pub async fn create<T>(&self, new_item: T) -> Result<T::BaseType>
-    where
-        T: CreateDtoObject,
-    {
+    pub async fn create<T: Item>(&self, new_item: T::CreateDto) -> Result<T::BaseType> {
         let url = format!("/api/{}/", T::endpoint());
         let resp = self
             .request_with_body(Method::POST, &url, &new_item)
@@ -574,6 +529,22 @@ impl PaperlessClient {
         resp.json::<T::BaseType>()
             .await
             .map_err(|e| Error::Other(format!("Failed to parse response body: {e}")))
+    }
+
+    /// Updates an existing item in Paperless.
+    ///
+    /// All structs which implement [`UpdateDtoObject`] can be used as `item`.
+    pub async fn update<T: Item>(&self, id: T::Id, item: T::UpdateDto) -> Result<()> {
+        let url = format!("/api/{}/{}/", T::endpoint(), id);
+        self.request_with_body(Method::PATCH, &url, &item).await?;
+        Ok(())
+    }
+
+    /// Deletes an existing item in Paperless.
+    pub async fn delete<T: Item>(&self, id: T::Id) -> Result<()> {
+        let url = format!("/api/{}/{}/", T::endpoint(), id);
+        self.request(Method::DELETE, &url, None).await?;
+        Ok(())
     }
 
     /// Upload a document to Paperless.

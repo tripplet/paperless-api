@@ -2,13 +2,13 @@
 
 use serde::{Deserialize, Serialize};
 
-use paperless_api_macros::CreateDto;
+use paperless_api_macros::{CreateDto, Item, UpdateDto};
 
 use super::MatchAlgorithm;
 use super::permission::ItemPermissions;
 
 /// A storage path
-#[derive(Debug, Clone, Deserialize, Serialize, CreateDto)]
+#[derive(Debug, Clone, Deserialize, Serialize, CreateDto, UpdateDto, Item)]
 #[api_info(endpoint = "storage_paths")]
 pub struct StoragePath {
     pub id: crate::id::StoragePathId,
@@ -21,12 +21,15 @@ pub struct StoragePath {
     pub matching_algorithm: MatchAlgorithm,
     pub is_insensitive: bool,
 
+    #[dto(skip)]
     #[serde(default)]
     pub document_count: u32,
 
+    #[dto(skip)]
     pub owner: Option<crate::id::UserId>,
 
     /// The permissions for this tag.
+    #[dto(skip)]
     #[serde(flatten)]
     pub permissions: ItemPermissions,
 }

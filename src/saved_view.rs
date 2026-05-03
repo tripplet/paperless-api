@@ -1,11 +1,11 @@
 //! Types related to saved views in the paperless UI.
 
 use derive_more::Display;
-use paperless_api_macros::{CreateDto, UpdateDto};
+use paperless_api_macros::{CreateDto, Item, UpdateDto};
 use serde::{Deserialize, Serialize};
 
 /// A saved view in the paperless UI.
-#[derive(Debug, Default, Clone, Deserialize, Serialize, CreateDto, UpdateDto)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize, CreateDto, UpdateDto, Item)]
 #[api_info(endpoint = "saved_views")]
 pub struct SavedView {
     /// The ID of the saved view.

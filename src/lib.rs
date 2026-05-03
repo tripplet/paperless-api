@@ -2,6 +2,7 @@
 
 pub mod client;
 pub mod document;
+pub mod document_query;
 pub mod dto;
 pub mod group;
 pub mod id;
@@ -16,8 +17,9 @@ pub mod workflow;
 
 pub use client::{PaperlessClient, RefreshMetaData};
 pub use document::Document;
+pub use document_query::DocumentQuery;
 pub use group::Group;
-pub use saved_view::{CreateSavedView, SavedView, UpdateSavedView};
+pub use saved_view::{CreateSavedView, SavedView};
 pub use share_link::ShareLink;
 pub use task::Task;
 pub use user::User;
