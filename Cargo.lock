@@ -841,7 +841,7 @@ dependencies = [
  "enum-iterator",
  "enumflags2",
  "futures-util",
- "paperless-api-macros",
+ "paperless-api-macros 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest",
  "serde",
  "serde_json",
@@ -855,6 +855,17 @@ dependencies = [
 [[package]]
 name = "paperless-api-macros"
 version = "0.8.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "paperless-api-macros"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5ee66405dd41c3b08746004ccbec394b16844da1d4d543e019f2c3436f92f758"
 dependencies = [
  "proc-macro2",
  "quote",
