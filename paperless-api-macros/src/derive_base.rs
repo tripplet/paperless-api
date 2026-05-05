@@ -1,5 +1,5 @@
 use quote::quote;
-use syn::{Data, DeriveInput, Fields, Ident};
+use syn::{Data, DeriveInput, Fields, Ident, Visibility};
 
 #[allow(dead_code)]
 pub(crate) struct DtoFieldAttributes {
@@ -11,6 +11,8 @@ pub(crate) struct DtoFieldAttributes {
 /// Represents a base struct for a DTO, containing its name, fields, and endpoint URL.
 pub(crate) struct BaseStruct {
     pub(crate) name: Ident,
+
+    visiblity: Visibility,
 
     /// The fields of the DTO struct.
     pub(crate) fields: Vec<syn::Field>,
@@ -68,6 +70,7 @@ impl TryFrom<DeriveInput> for BaseStruct {
 
         Ok(Self {
             name: input.ident,
+            visiblity: input.vis,
             fields: fields.iter().cloned().collect(),
         })
     }
@@ -131,7 +134,7 @@ impl BaseStruct {
             let vis = &field.vis;
             let attrs = non_dto_attrs(&field.attrs);
 
-            let def = if all_optional && !is_option_type(ty) {
+            let def = if all_optional {
                 quote! {
                     #(#attrs)*
                     #[serde(skip_serializing_if = "Option::is_none")]
@@ -146,10 +149,13 @@ impl BaseStruct {
             field_defs.push(def);
         }
 
+        let visibility = &self.visiblity;
+
         // Generate the struct
         quote! {
             #[derive(Debug, Default, Clone, serde::Serialize)]
-            pub struct #new_name {
+            #[automatically_derived]
+            #visibility struct #new_name {
                 #(#field_defs)*
             }
         }
@@ -160,6 +166,7 @@ fn non_dto_attrs(attrs: &[syn::Attribute]) -> Vec<&syn::Attribute> {
     attrs.iter().filter(|a| !a.path().is_ident("dto")).collect()
 }
 
+#[allow(dead_code)]
 fn is_option_type(ty: &syn::Type) -> bool {
     if let syn::Type::Path(type_path) = ty
         && let Some(segment) = type_path.path.segments.last()

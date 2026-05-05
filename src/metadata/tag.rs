@@ -48,7 +48,6 @@ pub struct Tag {
     pub document_count: u32,
 
     /// Owner of the tag.
-    #[dto(skip)]
     pub owner: Option<crate::id::UserId>,
 
     /// Parent tag of this tag.

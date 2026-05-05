@@ -23,6 +23,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "tokio-fs")]
 use tokio::io::AsyncWriteExt;
 
+use paperless_api_macros::UpdateDto;
+
 use crate::{
     Error, Result,
     client::PaperlessClient,
@@ -55,15 +57,27 @@ pub struct Document {
     changed_values: BitFlags<ChangedAttributes>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, UpdateDto)]
 pub struct DocumentData {
+    #[dto(skip)]
     id: DocumentId,
+
     archive_serial_number: Option<ArchiveSerialNumber>,
+
+    #[dto(skip)]
     original_file_name: String,
+
+    #[dto(skip)]
     added: DateTime<Utc>,
+
     created: Option<NaiveDate>,
+
+    #[dto(skip)]
     modified: DateTime<Utc>,
+
+    #[dto(skip)]
     page_count: Option<u32>,
+
     title: String,
     content: String,
     tags: Vec<TagId>,
@@ -72,9 +86,12 @@ pub struct DocumentData {
     custom_fields: Vec<DocumentCustomField>,
     document_type: Option<DocumentTypeId>,
     storage_path: Option<StoragePathId>,
+
+    #[dto(skip)]
     notes: Vec<Note>,
 
     #[serde(flatten)]
+    #[dto(skip)]
     permissions: ItemPermissions,
 }
 
@@ -86,6 +103,7 @@ pub struct ArchiveSerialNumber(pub u32);
 #[repr(u16)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum ChangedAttributes {
+    ArchiveSerialNumber,
     Title,
     Content,
     Tags,
@@ -107,36 +125,6 @@ pub enum Content<'a> {
 
     /// Truncated content of the document.
     Truncated(&'a str),
-}
-
-#[derive(Debug, Serialize)]
-struct PatchRequest {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    title: Option<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    content: Option<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    tags: Option<Vec<TagId>>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    custom_fields: Option<Vec<DocumentCustomField>>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    correspondent: Option<CorrespondentId>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    document_type: Option<DocumentTypeId>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    created: Option<NaiveDate>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    owner: Option<UserId>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    storage_path: Option<StoragePathId>,
 }
 
 #[derive(Debug, Serialize)]
@@ -283,6 +271,16 @@ impl Document {
         &self.data.permissions
     }
 
+    /// Set the archive serial number of the document.
+    #[inline]
+    pub fn set_archive_serial_number(
+        &mut self,
+        archive_serial_number: Option<ArchiveSerialNumber>,
+    ) {
+        self.data.archive_serial_number = archive_serial_number;
+        self.changed_values |= ChangedAttributes::ArchiveSerialNumber;
+    }
+
     /// Add a tag to the document.
     pub fn add_tag(&mut self, tag_id: TagId) {
         if !self.data.tags.contains(&tag_id) {
@@ -421,11 +419,16 @@ impl Document {
 
         self.fail_if_deleted()?;
 
-        let patch = PatchRequest {
+        let patch = UpdateDocumentData {
             title: self
                 .changed_values
                 .contains(ChangedAttributes::Title)
                 .then_some(self.data.title.clone()),
+
+            archive_serial_number: self
+                .changed_values
+                .contains(ChangedAttributes::ArchiveSerialNumber)
+                .then_some(self.data.archive_serial_number),
 
             content: self
                 .changed_values
@@ -453,32 +456,27 @@ impl Document {
             correspondent: self
                 .changed_values
                 .contains(ChangedAttributes::Correspondent)
-                .then_some(self.data.correspondent)
-                .flatten(),
+                .then_some(self.data.correspondent),
 
             document_type: self
                 .changed_values
                 .contains(ChangedAttributes::DocumentType)
-                .then_some(self.data.document_type)
-                .flatten(),
+                .then_some(self.data.document_type),
 
             created: self
                 .changed_values
                 .contains(ChangedAttributes::Created)
-                .then_some(self.data.created)
-                .flatten(),
+                .then_some(self.data.created),
 
             owner: self
                 .changed_values
                 .contains(ChangedAttributes::Owner)
-                .then_some(self.data.owner)
-                .flatten(),
+                .then_some(self.data.owner),
 
             storage_path: self
                 .changed_values
                 .contains(ChangedAttributes::StoragePath)
-                .then_some(self.data.storage_path)
-                .flatten(),
+                .then_some(self.data.storage_path),
         };
 
         self.client

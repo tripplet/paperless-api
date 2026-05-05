@@ -25,7 +25,6 @@ pub struct StoragePath {
     #[serde(default)]
     pub document_count: u32,
 
-    #[dto(skip)]
     pub owner: Option<crate::id::UserId>,
 
     /// The permissions for this tag.

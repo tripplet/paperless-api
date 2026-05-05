@@ -313,7 +313,7 @@ impl PaperlessClient {
     ) -> impl Future<Output = Result<Vec<Document>>> {
         let query = DocumentQueryBuilder::default()
             .full_content(!truncate_content)
-            .tags_id_in(tag_ids.iter().copied().collect());
+            .tags_id_in(tag_ids.to_vec());
 
         self.query_documents(query)
     }
@@ -515,7 +515,7 @@ impl PaperlessClient {
 
     /// Create a new item in Paperless.
     ///
-    /// All structs which implement [`CreateDtoObject`] can be used as `new_item`.
+    /// All structs which implement [`CreateDtoObject`](crate::dto::CreateDtoObject) can be used as `new_item`.
     ///
     /// Returns the created item
     pub async fn create<T: Item>(&self, new_item: T::CreateDto) -> Result<T::BaseType> {
@@ -526,12 +526,12 @@ impl PaperlessClient {
 
         resp.json::<T::BaseType>()
             .await
-            .map_err(|e| Error::Other(format!("Failed to parse response body: {e}")))
+            .map_err(|e| Error::Other(format!("Failed to parse response body: {e:?}")))
     }
 
     /// Updates an existing item in Paperless.
     ///
-    /// All structs which implement [`UpdateDtoObject`] can be used as `item`.
+    /// All structs which implement [`UpdateDtoObject`](crate::dto::UpdateDtoObject) can be used as `item`.
     pub async fn update<T: Item>(&self, id: T::Id, item: T::UpdateDto) -> Result<()> {
         let url = format!("/api/{}/{}/", T::endpoint(), id);
         self.request_with_body(Method::PATCH, &url, &item).await?;

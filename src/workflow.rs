@@ -5,10 +5,13 @@ use std::collections::HashMap;
 use serde::Deserialize;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
+use paperless_api_macros::UpdateDto;
+
 /// A workflow
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, UpdateDto)]
 pub struct Workflow {
     /// Unique identifier of the workflow.
+    #[dto(skip)]
     pub id: crate::id::WorkflowId,
 
     /// Whether the workflow is enabled.
@@ -21,9 +24,11 @@ pub struct Workflow {
     pub order: Option<i32>,
 
     /// Triggers that determine when the workflow is executed.
+    #[dto(skip)] // TODO
     pub triggers: Vec<WorkflowTrigger>,
 
     /// Actions that are executed when the workflow is triggered.
+    #[dto(skip)] // TODO
     pub actions: Vec<WorkflowAction>,
 }
 

@@ -24,6 +24,7 @@ pub fn derive_create_dto(input: TokenStream) -> TokenStream {
     TokenStream::from(quote! {
         #new_struct
 
+        #[automatically_derived]
         impl crate::dto::CreateDtoObject for #new_struct_name {}
     })
 }
@@ -46,6 +47,7 @@ pub fn derive_update_dto(input: TokenStream) -> TokenStream {
     TokenStream::from(quote! {
         #new_struct
 
+        #[automatically_derived]
         impl crate::dto::UpdateDtoObject for #new_struct_name {}
     })
 }
@@ -70,6 +72,7 @@ pub fn derive_item_trait(input: TokenStream) -> TokenStream {
 
     // Generate the final output with the trait implementation
     TokenStream::from(quote! {
+        #[automatically_derived]
         impl crate::dto::Item for #name {
             type Id = #id_type_name;
             type BaseType = #name;

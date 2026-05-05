@@ -38,7 +38,6 @@ pub struct Correspondent {
     pub document_count: u32,
 
     /// The user who owns this correspondent, if any.
-    #[dto(skip)]
     pub owner: Option<crate::id::UserId>,
 
     /// The permissions for this correspondent.

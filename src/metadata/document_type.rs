@@ -38,7 +38,6 @@ pub struct DocumentType {
     pub document_count: u32,
 
     /// Owner of the document type.
-    #[dto(skip)]
     pub owner: Option<crate::id::UserId>,
 
     /// The permissions for this tag.
