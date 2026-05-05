@@ -1,5 +1,7 @@
 # paperless-api
 
+[![CI](https://github.com/tripplet/paperless-api/actions/workflows/ci.yml/badge.svg)](https://github.com/tripplet/paperless-api/actions/workflows/ci.yml)
+
 A small async Rust client for interacting with the Paperless-ngx API.
 
 This crate provides `PaperlessClient` for talking to a Paperless instance and
