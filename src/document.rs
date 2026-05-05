@@ -624,7 +624,7 @@ impl Document {
         let mut share_link: ShareLink = resp
             .json()
             .await
-            .map_err(|e| Error::Other(format!("Failed to generate share link: {e}")))?;
+            .map_err(|e| Error::Other(format!("Failed to generate share link: {e:?}")))?;
 
         share_link.base_url = self.client.base_url.clone();
         Ok(share_link)

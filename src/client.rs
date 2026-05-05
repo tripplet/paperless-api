@@ -326,7 +326,7 @@ impl PaperlessClient {
         let document_data: DocumentData = resp
             .json()
             .await
-            .map_err(|e| Error::Other(format!("Failed to parse document: {e}")))?;
+            .map_err(|e| Error::Other(format!("Failed to parse document: {e:?}")))?;
 
         Ok(document_data)
     }
@@ -469,13 +469,13 @@ impl PaperlessClient {
         let body = resp
             .text()
             .await
-            .map_err(|e| Error::Other(format!("Failed to read response body: {e}")))?;
+            .map_err(|e| Error::Other(format!("Failed to read response body: {e:?}")))?;
 
         let tasks: Vec<Task> = match serde_json::from_str(&body) {
             Ok(t) => t,
             Err(e) => {
                 return Err(Error::InvalidJson(format!(
-                    "Failed to parse response body: {e}"
+                    "Failed to parse response body: {e:?}"
                 )));
             }
         };
@@ -578,7 +578,7 @@ impl PaperlessClient {
         let task_id: String = resp
             .json()
             .await
-            .map_err(|e| Error::Other(format!("Failed to parse task ID: {e}")))?;
+            .map_err(|e| Error::Other(format!("Failed to parse task ID: {e:?}")))?;
         Ok(TaskId(task_id))
     }
 
