@@ -2,7 +2,7 @@
 name = "paperless-api"
 description = "Async Paperless ngx API client"
 license = "MIT"
-version = "0.8.0"
+version = "0.9.0"
 repository = "https://github.com/tripplet/paperless-api"
 edition = "2024"
 
@@ -22,7 +22,7 @@ enum-iterator = "2.3"
 enumflags2 = "0.7"
 futures-util = { version = "0.3" }
 #paperless-api-macros = { path = "paperless-api-macros" }
-paperless-api-macros = "=0.8.0"
+paperless-api-macros = "=0.9.0"
 reqwest = { version = "0.13", features = ["json", "multipart", "stream", "zstd"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
