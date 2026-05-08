@@ -20,8 +20,8 @@ pub struct DocumentQuery {
     pub(crate) query: Vec<(&'static str, String)>,
 }
 
-const QUERY_PARAM_FULL_PERMISSIONS: &str = "full_perms";
-const QUERY_PARAM_TRUNCATE_CONTENT: &str = "truncate_content";
+pub(crate) const QUERY_PARAM_FULL_PERMISSIONS: &str = "full_perms";
+pub(crate) const QUERY_PARAM_TRUNCATE_CONTENT: &str = "truncate_content";
 const QUERY_PARAM_TAGS_ID_IN: &str = "tags__id__in";
 const QUERY_PARAM_ARCHIVE_SERIAL_NUMBER: &str = "archive_serial_number";
 const QUERY_PARAM_CORRESPONDENT_ID_IN: &str = "correspondent__id__in";
@@ -73,8 +73,8 @@ impl DocumentQueryBuilder {
 
     /// Returns documents with full permissions data.
     #[must_use]
-    pub fn full_permissions(mut self) -> Self {
-        self.full_permissions = true;
+    pub fn full_permissions(mut self, full_permissions: bool) -> Self {
+        self.full_permissions = full_permissions;
         self
     }
 

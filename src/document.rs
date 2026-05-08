@@ -484,6 +484,7 @@ impl Document {
                 Method::PATCH,
                 &format!("/api/documents/{}/", self.data.id),
                 &patch,
+                None,
             )
             .await?;
 
@@ -496,6 +497,7 @@ impl Document {
             .request(
                 Method::DELETE,
                 &format!("/api/documents/{}/", self.data.id),
+                None,
                 None,
             )
             .await?;
@@ -528,6 +530,7 @@ impl Document {
                 Method::GET,
                 &format!("/api/documents/{}/download/", self.data.id),
                 None,
+                None,
             )
             .await?;
 
@@ -555,6 +558,7 @@ impl Document {
             .request(
                 Method::GET,
                 &format!("/api/documents/{}/download/", self.data.id),
+                None,
                 None,
             )
             .await?;
@@ -616,6 +620,7 @@ impl Document {
                     })
                     .expect("Share link request"),
                 ),
+                None,
             )
             .await?;
 

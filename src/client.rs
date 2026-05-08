@@ -29,8 +29,6 @@ use crate::{
     workflow::Workflow,
 };
 
-const QUERY_PARAM_FULL_PERMISSIONS: &str = "full_perms";
-
 /// Selects which cached metadata to refresh.
 ///
 /// Cached data is data which is rarly updated,
@@ -52,6 +50,9 @@ pub enum RefreshMetaData {
 pub struct PaperlessClient {
     /// Whether to request full permissions data for items.
     pub request_full_permissions: bool,
+
+    /// Whether to request always request the full document content.
+    pub request_full_content: bool,
 
     pub(crate) base_url: Arc<str>,
 
@@ -138,6 +139,7 @@ impl PaperlessClient {
 
         Ok(Self {
             request_full_permissions: false,
+            request_full_content: false,
             base_url: base_url.into(),
             client: client_builder
                 .default_headers(headers_map)
@@ -165,20 +167,34 @@ impl PaperlessClient {
         self
     }
 
+    pub fn with_full_content(mut self, full_content: bool) -> Self {
+        self.request_full_content = full_content;
+        self
+    }
+
     /// Loads all items of the given type from the API.
     async fn load_items<T: Item + DeserializeOwned>(&self) -> Result<HashMap<T::Id, T>> {
         debug!("Loading {}", T::endpoint());
         let endpoint = format!("/api/{}/", T::endpoint());
 
         let items: Vec<T> = self
-            .fetch_all_pages(&endpoint, self.permissions_query_param())
+            .fetch_all_pages(&endpoint, self.default_query_params().as_deref())
             .await?;
         Ok(items.into_iter().map(|item| (item.id(), item)).collect())
     }
 
-    fn permissions_query_param(&self) -> Option<&'static [(&'static str, &'static str)]> {
+    fn default_query_params(&self) -> Option<Vec<(&'static str, &'static str)>> {
+        let mut params = Vec::with_capacity(2);
+
         if self.request_full_permissions {
-            Some(&[(QUERY_PARAM_FULL_PERMISSIONS, "true")])
+            params.push((crate::document_query::QUERY_PARAM_FULL_PERMISSIONS, "true"));
+        }
+        if !self.request_full_content {
+            params.push((crate::document_query::QUERY_PARAM_TRUNCATE_CONTENT, "true"));
+        }
+
+        if !params.is_empty() {
+            Some(params)
         } else {
             None
         }
@@ -286,7 +302,6 @@ impl PaperlessClient {
 
     pub async fn query_documents(&self, query: DocumentQueryBuilder) -> Result<Vec<Document>> {
         let full_content = query.full_content;
-
         let query_params = query.build();
         let query_vec: Vec<_> = query_params
             .query
@@ -309,10 +324,10 @@ impl PaperlessClient {
     pub fn get_documents_by_tags(
         &self,
         tag_ids: &[TagId],
-        truncate_content: bool,
     ) -> impl Future<Output = Result<Vec<Document>>> {
         let query = DocumentQueryBuilder::default()
-            .full_content(!truncate_content)
+            .full_content(self.request_full_content)
+            .full_permissions(self.request_full_permissions)
             .tags_id_in(tag_ids.to_vec());
 
         self.query_documents(query)
@@ -320,7 +335,12 @@ impl PaperlessClient {
 
     pub(crate) async fn get_document_data_by_id(&self, id: DocumentId) -> Result<DocumentData> {
         let resp = self
-            .request(Method::GET, &format!("/api/documents/{}/", id.0), None)
+            .request(
+                Method::GET,
+                &format!("/api/documents/{}/", id.0),
+                None,
+                self.default_query_params().as_deref(),
+            )
             .await?;
 
         let document_data: DocumentData = resp
@@ -345,10 +365,26 @@ impl PaperlessClient {
         method: Method,
         endpoint: &str,
         body: Option<&serde_json::Value>,
+        query_params: Option<&[(&str, &str)]>,
     ) -> Result<reqwest::Response> {
+        let mut endpoint_query = endpoint.to_string();
+        let mut first_param = true;
+
+        if let Some(params) = query_params {
+            for param in params {
+                if first_param {
+                    endpoint_query.push('?');
+                    first_param = false;
+                } else {
+                    endpoint_query.push('&');
+                }
+                let _ = write!(endpoint_query, "{}={}", param.0, param.1);
+            }
+        }
+
         let mut req = self
             .client
-            .request(method, format!("{}{endpoint}", self.base_url))
+            .request(method, format!("{}{endpoint_query}", self.base_url))
             .header(ACCEPT, "application/json");
 
         // Set payload body if provided
@@ -380,9 +416,11 @@ impl PaperlessClient {
         method: Method,
         endpoint: &str,
         body: &impl serde::Serialize,
+        query_params: Option<&[(&str, &str)]>,
     ) -> Result<reqwest::Response> {
         let body = serde_json::to_value(body).map_err(|e| Error::Other(e.to_string()))?;
-        self.request(method, endpoint, Some(&body)).await
+        self.request(method, endpoint, Some(&body), query_params)
+            .await
     }
 
     pub(crate) async fn fetch_all_pages<T: for<'de> Deserialize<'de>>(
@@ -390,26 +428,17 @@ impl PaperlessClient {
         endpoint: &str,
         query_params: Option<&[(&str, &str)]>,
     ) -> Result<Vec<T>> {
-        let mut results = Vec::new();
-        let mut current_url = endpoint.to_string();
-        let mut first_param = true;
+        let mut results = vec![];
+        let mut all_query_params = self.default_query_params().unwrap_or_default();
+        all_query_params.extend(query_params.unwrap_or_default());
+        let mut all_query_params = Some(all_query_params);
 
-        if let Some(params) = query_params {
-            for param in params {
-                if first_param {
-                    current_url.push('?');
-                    first_param = false;
-                } else {
-                    current_url.push('&');
-                }
-                let _ = write!(current_url, "{}={}", param.0, param.1);
-            }
-        }
-
-        let mut current_url = Some(current_url);
+        let mut current_url = Some(endpoint.to_string());
 
         while let Some(url) = current_url {
-            let resp = self.request(Method::GET, &url, None).await?;
+            let resp = self
+                .request(Method::GET, &url, None, all_query_params.as_deref())
+                .await?;
 
             let page: PaginatedResponse<T> = resp.json().await.map_err(|e| {
                 Error::InvalidJson(format!(
@@ -426,6 +455,7 @@ impl PaperlessClient {
                     .to_string()
                     .into()
             });
+            all_query_params = None;
         }
 
         Ok(results)
@@ -461,6 +491,7 @@ impl PaperlessClient {
                         .map_err(|e| Error::Other(format!("Failed to serialize query: {e}")))?
                 ),
                 None::<&serde_json::Value>,
+                None,
             )
             .await?;
 
@@ -496,7 +527,7 @@ impl PaperlessClient {
     }
 
     pub async fn get_statistics(&self) -> Result<util::Statistics> {
-        self.request(Method::GET, "/api/statistics/", None)
+        self.request(Method::GET, "/api/statistics/", None, None)
             .await
             .map_err(|e| Error::Other(format!("Failed to send request: {e}")))?
             .json()
@@ -505,7 +536,7 @@ impl PaperlessClient {
     }
 
     pub async fn get_status(&self) -> Result<util::ServerStatus> {
-        self.request(Method::GET, "/api/status/", None)
+        self.request(Method::GET, "/api/status/", None, None)
             .await
             .map_err(|e| Error::Other(format!("Failed to send request: {e}")))?
             .json()
@@ -521,7 +552,7 @@ impl PaperlessClient {
     pub async fn create<T: Item>(&self, new_item: T::CreateDto) -> Result<T::BaseType> {
         let url = format!("/api/{}/", T::endpoint());
         let resp = self
-            .request_with_body(Method::POST, &url, &new_item)
+            .request_with_body(Method::POST, &url, &new_item, None)
             .await?;
 
         resp.json::<T::BaseType>()
@@ -534,14 +565,15 @@ impl PaperlessClient {
     /// All structs which implement [`UpdateDtoObject`](crate::dto::UpdateDtoObject) can be used as `item`.
     pub async fn update<T: Item>(&self, id: T::Id, item: T::UpdateDto) -> Result<()> {
         let url = format!("/api/{}/{}/", T::endpoint(), id);
-        self.request_with_body(Method::PATCH, &url, &item).await?;
+        self.request_with_body(Method::PATCH, &url, &item, None)
+            .await?;
         Ok(())
     }
 
     /// Deletes an existing item in Paperless.
     pub async fn delete<T: Item>(&self, id: T::Id) -> Result<()> {
         let url = format!("/api/{}/{}/", T::endpoint(), id);
-        self.request(Method::DELETE, &url, None).await?;
+        self.request(Method::DELETE, &url, None, None).await?;
         Ok(())
     }
 
