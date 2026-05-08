@@ -4,6 +4,8 @@ use derive_more::Display;
 use paperless_api_macros::{CreateDto, Item, UpdateDto};
 use serde::{Deserialize, Serialize};
 
+use crate::metadata::permission::ItemPermissions;
+
 /// A saved view in the paperless UI.
 #[derive(Debug, Default, Clone, Deserialize, Serialize, CreateDto, UpdateDto, Item)]
 #[api_info(endpoint = "saved_views")]
@@ -45,7 +47,8 @@ pub struct SavedView {
 
     /// Whether the user can change the saved view.
     #[dto(skip)]
-    pub user_can_change: bool,
+    #[serde(flatten)]
+    pub permissions: ItemPermissions,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
