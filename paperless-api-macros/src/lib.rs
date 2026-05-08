@@ -29,7 +29,7 @@ pub fn derive_create_dto(input: TokenStream) -> TokenStream {
     })
 }
 
-/// Derives a `Create..` struct for the given input struct.
+/// Derives a `Update..` struct for the given input struct.
 #[proc_macro_derive(UpdateDto, attributes(dto, api_info))]
 pub fn derive_update_dto(input: TokenStream) -> TokenStream {
     // Parse the input

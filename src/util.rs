@@ -208,7 +208,7 @@ impl From<RawDatabase> for Database {
         Self {
             db_type: raw.db_type,
             url: raw.url,
-            status: merge_status_with_error(raw.status, raw.error),
+            status: merge_status_with_error(&raw.status, raw.error),
             migration_status: raw.migration_status,
         }
     }
@@ -218,7 +218,7 @@ impl From<RawRedisStatus> for RedisStatus {
     fn from(raw: RawRedisStatus) -> Self {
         Self {
             url: raw.redis_url,
-            status: merge_status_with_error(raw.redis_status, raw.redis_error),
+            status: merge_status_with_error(&raw.redis_status, raw.redis_error),
         }
     }
 }
@@ -226,7 +226,7 @@ impl From<RawRedisStatus> for RedisStatus {
 impl From<RawCeleryStatus> for CeleryStatus {
     fn from(raw: RawCeleryStatus) -> Self {
         Self {
-            status: merge_status_with_error(raw.celery_status, raw.celery_error),
+            status: merge_status_with_error(&raw.celery_status, raw.celery_error),
             url: raw.celery_url,
         }
     }
@@ -235,7 +235,7 @@ impl From<RawCeleryStatus> for CeleryStatus {
 impl From<RawIndexStatus> for IndexStatus {
     fn from(raw: RawIndexStatus) -> Self {
         Self {
-            status: merge_status_with_error(raw.index_status, raw.index_error),
+            status: merge_status_with_error(&raw.index_status, raw.index_error),
             last_modified: raw.index_last_modified,
         }
     }
@@ -244,7 +244,7 @@ impl From<RawIndexStatus> for IndexStatus {
 impl From<RawClassifierStatus> for ClassifierStatus {
     fn from(raw: RawClassifierStatus) -> Self {
         Self {
-            status: merge_status_with_error(raw.classifier_status, raw.classifier_error),
+            status: merge_status_with_error(&raw.classifier_status, raw.classifier_error),
             last_trained: raw.classifier_last_trained,
         }
     }
@@ -253,7 +253,7 @@ impl From<RawClassifierStatus> for ClassifierStatus {
 impl From<RawSanityCheckStatus> for SanityCheckStatus {
     fn from(raw: RawSanityCheckStatus) -> Self {
         Self {
-            status: merge_status_with_error(raw.sanity_check_status, raw.sanity_check_error),
+            status: merge_status_with_error(&raw.sanity_check_status, raw.sanity_check_error),
             last_run: raw.sanity_check_last_run,
         }
     }
@@ -268,7 +268,7 @@ impl std::fmt::Display for Health {
     }
 }
 
-fn merge_status_with_error(status: String, error: Option<String>) -> Health {
+fn merge_status_with_error(status: &str, error: Option<String>) -> Health {
     if status.to_lowercase() != "ok" && error.is_none() {
         Health::Ok
     } else {

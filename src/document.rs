@@ -31,10 +31,9 @@ use crate::{
     id::{
         CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, StoragePathId, TagId, UserId,
     },
-    metadata::custom_field::DocumentCustomField,
-    metadata::permission::ItemPermissions,
+    metadata::{custom_field::DocumentCustomField, permission::ItemPermissions},
     note::Note,
-    share_link::{ShareLink, ShareLinkFileVersion},
+    share_link::{CreateShareLink, ShareLink, ShareLinkFileVersion},
 };
 
 /// Represents a document.

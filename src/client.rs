@@ -167,6 +167,7 @@ impl PaperlessClient {
         self
     }
 
+    #[must_use]
     pub fn with_full_content(mut self, full_content: bool) -> Self {
         self.request_full_content = full_content;
         self
@@ -193,10 +194,10 @@ impl PaperlessClient {
             params.push((crate::document_query::QUERY_PARAM_TRUNCATE_CONTENT, "true"));
         }
 
-        if !params.is_empty() {
-            Some(params)
-        } else {
+        if params.is_empty() {
             None
+        } else {
+            Some(params)
         }
     }
 
