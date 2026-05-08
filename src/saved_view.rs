@@ -17,12 +17,6 @@ pub struct SavedView {
     /// The name of the saved view.
     pub name: String,
 
-    /// Whether the saved view should be shown on the dashboard.
-    pub show_on_dashboard: bool,
-
-    /// Whether the saved view should be shown in the sidebar.
-    pub show_in_sidebar: bool,
-
     /// The field to sort the view by.
     pub sort_field: Option<String>,
 
@@ -123,6 +117,8 @@ pub enum FilterRuleType {
     AddedTo = 45,
     AddedBy = 46,
     MimeTypeIs = 47,
+    SimpleTitleSearch = 48,
+    SimpleTextSearch = 49,
 
     Unknown(u8),
 }
@@ -136,11 +132,11 @@ mod tests {
         let zero: FilterRuleType = serde_json::from_str("0").unwrap();
         assert!(matches!(zero, FilterRuleType::TitleContains));
 
-        let forty_seven: FilterRuleType = serde_json::from_str("47").unwrap();
-        assert!(matches!(forty_seven, FilterRuleType::MimeTypeIs));
+        let forty_seven: FilterRuleType = serde_json::from_str("49").unwrap();
+        assert!(matches!(forty_seven, FilterRuleType::SimpleTextSearch));
 
-        let forty_seven: FilterRuleType = serde_json::from_str("48").unwrap();
-        assert!(matches!(forty_seven, FilterRuleType::Unknown(48)));
+        let forty_seven: FilterRuleType = serde_json::from_str("50").unwrap();
+        assert!(matches!(forty_seven, FilterRuleType::Unknown(50)));
     }
 
     #[test]

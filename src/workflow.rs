@@ -76,6 +76,8 @@ pub enum WorkflowActionType {
     Remove = 2,
     Email = 3,
     Webhook = 4,
+    PasswordRemoval = 5,
+    MoveToTrash = 6,
 }
 
 /// A webhook action that can be executed when a workflow is triggered.

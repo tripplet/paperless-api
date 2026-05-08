@@ -10,6 +10,7 @@ pub mod metadata;
 pub mod note;
 pub mod saved_view;
 pub mod share_link;
+pub mod share_link_bundle;
 pub mod task;
 pub mod user;
 pub mod util;

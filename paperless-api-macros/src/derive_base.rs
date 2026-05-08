@@ -18,7 +18,7 @@ pub(crate) struct BaseStruct {
     pub(crate) fields: Vec<syn::Field>,
 
     /// The endpoint URL for the Item.
-    pub endpoint: String,
+    pub endpoint: proc_macro2::TokenStream,
 
     pub id_type: Ident,
 }
@@ -58,8 +58,13 @@ impl TryFrom<DeriveInput> for BaseStruct {
                         visiblity = parse_quote! { pub(crate) };
                     } else if meta.path.is_ident("endpoint") {
                         let value = meta.value()?;
-                        let lit: syn::LitStr = value.parse()?;
-                        endpoint = Some(lit.value());
+                        if let Ok(lit) = value.parse::<syn::LitStr>() {
+                            endpoint = Some(quote!(#lit));
+                        } else if let Ok(path) = value.parse::<syn::Path>() {
+                            endpoint = Some(quote!(#path));
+                        } else {
+                            return Err(meta.error("expected string literal or path expression"));
+                        }
                     } else if meta.path.is_ident("id") {
                         let value = meta.value()?;
                         id_type = value.parse()?;

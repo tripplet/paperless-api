@@ -74,6 +74,7 @@ define_ids!(
     (SavedViewId, u32),
     (SelectableOptionId, String, noncopy),
     (ShareLinkId, u32),
+    (ShareLinkBundleId, u32),
     (StoragePathId, u32),
     (TagId, u32),
     (TaskId, String, noncopy),
