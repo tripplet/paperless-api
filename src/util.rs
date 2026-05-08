@@ -97,7 +97,7 @@ pub enum Health {
     Ok,
 
     #[serde(untagged)]
-    Error(String),
+    NotOk(String),
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -113,6 +113,9 @@ pub struct StatusTask {
 
     #[serde(flatten)]
     pub sanity_check: SanityCheckStatus,
+
+    #[serde(flatten)]
+    pub classifier: ClassifierStatus,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -260,18 +263,19 @@ impl std::fmt::Display for Health {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Health::Ok => write!(f, "OK"),
-            Health::Error(err) => write!(f, "Error: {err}"),
+            Health::NotOk(err) => write!(f, "Error: {err}"),
         }
     }
 }
 
 fn merge_status_with_error(status: String, error: Option<String>) -> Health {
-    if let Some(error) = error {
-        Health::Error(error)
-    } else if status.to_lowercase() != "ok" {
-        Health::Error(status)
-    } else {
+    if status.to_lowercase() != "ok" && error.is_none() {
         Health::Ok
+    } else {
+        Health::NotOk(format!(
+            "{status}: {error}",
+            error = error.unwrap_or_default()
+        ))
     }
 }
 
@@ -282,26 +286,29 @@ impl ServerStatus {
     pub fn overall(&self) -> Health {
         let mut errors = Vec::new();
 
-        if let Health::Error(ref err) = self.database.status {
+        if let Health::NotOk(ref err) = self.database.status {
             errors.push(format!("database: {err}"));
         }
-        if let Health::Error(ref err) = self.tasks.redis.status {
-            errors.push(format!("task redis: {err}"));
+        if let Health::NotOk(ref err) = self.tasks.redis.status {
+            errors.push(format!("redis: {err}"));
         }
-        if let Health::Error(ref err) = self.tasks.celery.status {
-            errors.push(format!("task celery: {err}"));
+        if let Health::NotOk(ref err) = self.tasks.celery.status {
+            errors.push(format!("celery: {err}"));
         }
-        if let Health::Error(ref err) = self.tasks.index.status {
-            errors.push(format!("task index: {err}"));
+        if let Health::NotOk(ref err) = self.tasks.index.status {
+            errors.push(format!("index: {err}"));
         }
-        if let Health::Error(ref err) = self.tasks.sanity_check.status {
-            errors.push(format!("task sanity_check: {err}"));
+        if let Health::NotOk(ref err) = self.tasks.sanity_check.status {
+            errors.push(format!("sanity_check: {err}"));
+        }
+        if let Health::NotOk(ref err) = self.tasks.classifier.status {
+            errors.push(format!("classifier: {err}"));
         }
 
         if errors.is_empty() {
             Health::Ok
         } else {
-            Health::Error(errors.join(", "))
+            Health::NotOk(errors.join(", "))
         }
     }
 }
