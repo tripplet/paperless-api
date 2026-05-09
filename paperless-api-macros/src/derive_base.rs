@@ -1,5 +1,5 @@
 use quote::quote;
-use syn::{Data, DeriveInput, Fields, Ident, Visibility};
+use syn::{Data, DeriveInput, Fields, Ident, Visibility, parse_quote};
 
 #[allow(dead_code)]
 pub(crate) struct DtoFieldAttributes {
@@ -49,6 +49,23 @@ impl TryFrom<DeriveInput> for BaseStruct {
     type Error = syn::Error;
 
     fn try_from(input: DeriveInput) -> syn::Result<Self> {
+        let mut visiblity = input.vis;
+
+        for attr in &input.attrs {
+            if attr.path().is_ident("api_info") {
+                attr.parse_nested_meta(|meta| {
+                    if meta.path.is_ident("private") {
+                        visiblity = parse_quote! { pub(crate) };
+                    } else if meta.path.is_ident("endpoint") {
+                        let value = meta.value()?;
+                        let _: syn::LitStr = value.parse()?;
+                    }
+
+                    Ok(())
+                })?;
+            }
+        }
+
         // Extract the fields
         let fields = match &input.data {
             Data::Struct(data) => match &data.fields {
@@ -70,7 +87,7 @@ impl TryFrom<DeriveInput> for BaseStruct {
 
         Ok(Self {
             name: input.ident,
-            visiblity: input.vis,
+            visiblity,
             fields: fields.iter().cloned().collect(),
         })
     }

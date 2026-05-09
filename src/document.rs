@@ -126,13 +126,6 @@ pub enum Content<'a> {
     Truncated(&'a str),
 }
 
-#[derive(Debug, Serialize)]
-struct ShareLinkRequest {
-    document: DocumentId,
-    file_version: ShareLinkFileVersion,
-    expiration: DateTime<Utc>,
-}
-
 impl Document {
     pub(crate) fn new(
         data: DocumentData,
@@ -608,17 +601,14 @@ impl Document {
 
         let resp = self
             .client
-            .request(
+            .request_with_body(
                 Method::POST,
                 "/api/share_links/",
-                Some(
-                    &serde_json::to_value(ShareLinkRequest {
-                        document: self.data.id,
-                        file_version: version,
-                        expiration: expires,
-                    })
-                    .expect("Share link request"),
-                ),
+                &CreateShareLink {
+                    document: self.id(),
+                    expiration: expires,
+                    file_version: version,
+                },
                 None,
             )
             .await?;
