@@ -121,7 +121,7 @@ impl DocumentQueryBuilder {
             query.push((QUERY_PARAM_TRUNCATE_CONTENT, "false".to_string()));
         }
 
-        if self.full_content {
+        if self.full_permissions {
             query.push((QUERY_PARAM_FULL_PERMISSIONS, "true".to_string()));
         }
 

@@ -269,7 +269,7 @@ impl std::fmt::Display for Health {
 }
 
 fn merge_status_with_error(status: &str, error: Option<String>) -> Health {
-    if status.to_lowercase() != "ok" && error.is_none() {
+    if status.to_lowercase() == "ok" && error.is_none() {
         Health::Ok
     } else {
         Health::NotOk(format!(

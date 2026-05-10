@@ -11,8 +11,12 @@ use super::permission::ItemPermissions;
 #[derive(Debug, Clone, Deserialize, Serialize, CreateDto, UpdateDto, Item)]
 #[api_info(endpoint = "storage_paths")]
 pub struct StoragePath {
+    #[dto(skip)]
     pub id: crate::id::StoragePathId,
+
+    #[dto(skip)]
     pub slug: String,
+
     pub name: String,
     pub path: String,
 
