@@ -411,6 +411,25 @@ impl Document {
         Ok(())
     }
 
+    /// Get the document thumbnail
+    pub async fn tumb(&self) -> Result<Vec<u8>> {
+        let resp = self
+            .client
+            .request(
+                Method::GET,
+                &format!("/api/documents/{}/thumb/", self.data.id),
+                None,
+                None,
+            )
+            .await?;
+
+        Ok(resp
+            .bytes()
+            .await
+            .map_err(|e| Error::Other(format!("Failed to read response body: {e}")))?
+            .to_vec())
+    }
+
     /// Update the document on the server.
     ///
     /// This applies the currently tracked local changes to the remote Paperless document.
