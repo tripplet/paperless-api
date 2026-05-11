@@ -281,29 +281,25 @@ fn merge_status_with_error(status: &str, error: Option<String>) -> Health {
 
 impl ServerStatus {
     /// Returns `Health::Ok` if all components report `Ok`.
-    /// Otherwise returns `Health::Error` with a combined message of all failures.
+    /// Otherwise returns `Health::NotOk` with a combined message.
     #[must_use]
     pub fn overall(&self) -> Health {
-        let mut errors = Vec::new();
+        let components = [
+            ("database.status", &self.database.status),
+            ("redis", &self.tasks.redis.status),
+            ("celery", &self.tasks.celery.status),
+            ("index", &self.tasks.index.status),
+            ("sanity_check", &self.tasks.sanity_check.status),
+            ("classifier", &self.tasks.classifier.status),
+        ];
 
-        if let Health::NotOk(ref err) = self.database.status {
-            errors.push(format!("database: {err}"));
-        }
-        if let Health::NotOk(ref err) = self.tasks.redis.status {
-            errors.push(format!("redis: {err}"));
-        }
-        if let Health::NotOk(ref err) = self.tasks.celery.status {
-            errors.push(format!("celery: {err}"));
-        }
-        if let Health::NotOk(ref err) = self.tasks.index.status {
-            errors.push(format!("index: {err}"));
-        }
-        if let Health::NotOk(ref err) = self.tasks.sanity_check.status {
-            errors.push(format!("sanity_check: {err}"));
-        }
-        if let Health::NotOk(ref err) = self.tasks.classifier.status {
-            errors.push(format!("classifier: {err}"));
-        }
+        let errors: Vec<_> = components
+            .iter()
+            .filter_map(|(name, health)| match health {
+                Health::NotOk(err) => Some(format!("{name}: {err}")),
+                Health::Ok => None,
+            })
+            .collect();
 
         if errors.is_empty() {
             Health::Ok

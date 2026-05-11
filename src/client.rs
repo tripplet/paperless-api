@@ -301,6 +301,7 @@ impl PaperlessClient {
         inner(self, &mut data.into_iter()).await
     }
 
+    /// Query documents using the given [`DocumentQueryBuilder`].
     pub async fn query_documents(&self, query: DocumentQueryBuilder) -> Result<Vec<Document>> {
         let full_content = query.full_content;
         let query_params = query.build();
@@ -615,12 +616,14 @@ impl PaperlessClient {
         Ok(TaskId(task_id))
     }
 
+    /// Get the tags cache
     #[inline]
     #[must_use]
     pub fn tags(&self) -> &HashMap<TagId, Tag> {
         &self.cached_data.tags
     }
 
+    /// Get the storage-path cache
     #[inline]
     #[must_use]
     pub fn storage_paths(&self) -> &HashMap<StoragePathId, StoragePath> {
@@ -632,6 +635,7 @@ impl PaperlessClient {
         self.cached_data.tags.values().find(|tag| tag.name == name)
     }
 
+    /// Get the document-types cache
     #[inline]
     #[must_use]
     pub fn document_types(&self) -> &HashMap<DocumentTypeId, DocumentType> {
@@ -646,12 +650,14 @@ impl PaperlessClient {
             .find(|dt| dt.name == name)
     }
 
+    /// Get the correspondents cache
     #[inline]
     #[must_use]
     pub fn correspondents(&self) -> &HashMap<CorrespondentId, Correspondent> {
         &self.cached_data.correspondents
     }
 
+    /// Get the custom fields cache
     #[inline]
     #[must_use]
     pub fn custom_fields(&self) -> &HashMap<CustomFieldId, CustomField> {
@@ -666,12 +672,14 @@ impl PaperlessClient {
             .find(|field| field.name == name)
     }
 
+    /// Get the users cache
     #[inline]
     #[must_use]
     pub fn users(&self) -> &HashMap<UserId, User> {
         &self.cached_data.users
     }
 
+    /// Get the groups cache
     #[inline]
     #[must_use]
     pub fn groups(&self) -> &HashMap<GroupId, Group> {

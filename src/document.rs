@@ -290,23 +290,23 @@ impl Document {
     }
 
     /// Set the title of the document.
-    pub fn set_title(&mut self, title: &str) {
-        self.data.title = title.to_string();
+    pub fn set_title(&mut self, title: impl Into<String>) {
+        self.data.title = title.into();
         self.changed_values |= ChangedAttributes::Title;
     }
 
     /// Set the content of the document.
-    pub fn set_content(&mut self, content: &str) {
-        self.data.content = content.to_string();
+    pub fn set_content(&mut self, content: impl Into<String>) {
+        self.data.content = content.into();
         self.content_is_truncated = false;
         self.changed_values |= ChangedAttributes::Content;
     }
 
     /// Set a custom field for the document.
-    pub fn set_custom_field(&mut self, field: CustomFieldId, value: &str) {
+    pub fn set_custom_field(&mut self, field: CustomFieldId, value: impl Into<String>) {
         for custom_field in &mut self.data.custom_fields {
             if custom_field.field == field {
-                custom_field.value = value.to_string();
+                custom_field.value = value.into();
                 self.changed_values |= ChangedAttributes::CustomFields;
                 return;
             }
@@ -314,7 +314,7 @@ impl Document {
 
         self.data.custom_fields.push(DocumentCustomField {
             field,
-            value: value.to_string(),
+            value: value.into(),
         });
         self.changed_values |= ChangedAttributes::CustomFields;
     }
@@ -435,16 +435,8 @@ impl Document {
             custom_fields: self
                 .changed_values
                 .contains(ChangedAttributes::CustomFields)
-                .then_some(
-                    self.data
-                        .custom_fields
-                        .iter()
-                        .map(|field| DocumentCustomField {
-                            field: field.field,
-                            value: field.value.clone(),
-                        })
-                        .collect(),
-                ),
+                .then_some(self.data.custom_fields.clone()),
+
             correspondent: self
                 .changed_values
                 .contains(ChangedAttributes::Correspondent)

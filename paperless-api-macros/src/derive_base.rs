@@ -182,14 +182,3 @@ impl BaseStruct {
 fn non_dto_attrs(attrs: &[syn::Attribute]) -> Vec<&syn::Attribute> {
     attrs.iter().filter(|a| !a.path().is_ident("dto")).collect()
 }
-
-#[allow(dead_code)]
-fn is_option_type(ty: &syn::Type) -> bool {
-    if let syn::Type::Path(type_path) = ty
-        && let Some(segment) = type_path.path.segments.last()
-    {
-        return segment.ident == "Option";
-    }
-
-    false
-}

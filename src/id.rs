@@ -30,11 +30,10 @@ macro_rules! define_ids {
             }
         }
 
-        impl std::ops::Deref for $name {
-            type Target = $type;
-
-            fn deref(&self) -> &Self::Target {
-                &self.0
+        impl From<$name> for $type {
+            #[inline]
+            fn from(item: $name) -> Self {
+                item.0
             }
         }
 
@@ -51,11 +50,11 @@ macro_rules! define_ids {
             }
         }
 
-        impl std::ops::Deref for $name {
-            type Target = $type;
-
-            fn deref(&self) -> &Self::Target {
-                &self.0
+        impl AsRef<str> for $name
+        {
+            #[inline]
+            fn as_ref(&self) -> &str {
+                self.0.as_ref()
             }
         }
 

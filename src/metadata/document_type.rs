@@ -8,7 +8,7 @@ use super::MatchAlgorithm;
 use super::permission::ItemPermissions;
 
 /// A document type
-#[derive(Debug, Default, Clone, Deserialize, Serialize, CreateDto, UpdateDto, Item)]
+#[derive(Debug, Clone, Deserialize, Serialize, CreateDto, UpdateDto, Item)]
 #[api_info(endpoint = "document_types")]
 pub struct DocumentType {
     /// Unique identifier of the document type.

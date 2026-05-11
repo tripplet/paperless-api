@@ -8,7 +8,7 @@ use super::MatchAlgorithm;
 use super::permission::ItemPermissions;
 
 /// A correspondent
-#[derive(Debug, Default, Clone, Deserialize, Serialize, CreateDto, UpdateDto, Item)]
+#[derive(Debug, Clone, Deserialize, Serialize, CreateDto, UpdateDto, Item)]
 #[api_info(endpoint = "correspondents")]
 pub struct Correspondent {
     /// Unique identifier of the correspondent.
