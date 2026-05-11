@@ -1,6 +1,13 @@
-# paperless-api
+# paperless-api &emsp; [![build]][ci] [![Latest Version]][crates.io] [![Docs]][docs.rs]
 
-[![CI](https://github.com/tripplet/paperless-api/actions/workflows/ci.yml/badge.svg)](https://github.com/tripplet/paperless-api/actions/workflows/ci.yml)
+[build]: https://github.com/tripplet/paperless-api/actions/workflows/ci.yml/badge.svg
+[ci]: https://github.com/tripplet/paperless-api/actions/workflows/ci.ym
+
+[Latest Version]: https://img.shields.io/crates/v/paperless-api.svg
+[crates.io]: https://crates.io/crates/paperless-api
+
+[Docs]: https://img.shields.io/docsrs/paperless-api
+[docs.rs]: https://docs.rs/paperless-api/latest/paperless_api/
 
 A small async Rust client for interacting with the Paperless-ngx API.
 
