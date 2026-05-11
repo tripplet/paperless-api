@@ -92,6 +92,9 @@ pub struct DocumentData {
     #[serde(flatten)]
     #[dto(skip)]
     permissions: ItemPermissions,
+
+    #[dto(skip)]
+    mime_type: Option<String>,
 }
 
 #[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
@@ -187,6 +190,13 @@ impl Document {
     #[must_use]
     pub fn original_file_name(&self) -> &str {
         &self.data.original_file_name
+    }
+
+    /// Get the MIME type
+    #[inline]
+    #[must_use]
+    pub fn mime_type(&self) -> Option<&str> {
+        self.data.mime_type.as_deref()
     }
 
     /// Get the correspondent id of the document.
