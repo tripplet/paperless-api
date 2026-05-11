@@ -1,6 +1,6 @@
 //! The central client for interacting with Paperless.
 
-use std::{collections::HashMap, fmt::Write, path::Path, str::FromStr, sync::Arc};
+use std::{collections::HashMap, path::Path, str::FromStr, sync::Arc};
 
 use enum_iterator::Sequence;
 use reqwest::{
@@ -336,21 +336,13 @@ impl PaperlessClient {
     }
 
     pub(crate) async fn get_document_data_by_id(&self, id: DocumentId) -> Result<DocumentData> {
-        let resp = self
-            .request(
-                Method::GET,
-                &format!("/api/documents/{}/", id.0),
-                None,
-                self.default_query_params().as_deref(),
-            )
-            .await?;
-
-        let document_data: DocumentData = resp
-            .json()
-            .await
-            .map_err(|e| Error::Other(format!("Failed to parse document: {e:?}")))?;
-
-        Ok(document_data)
+        self.request_json(
+            Method::GET,
+            &format!("/api/documents/{}/", id.0),
+            None,
+            self.default_query_params().as_deref(),
+        )
+        .await
     }
 
     /// Get a document by its ID.
@@ -362,6 +354,32 @@ impl PaperlessClient {
         ))
     }
 
+    /// Make a request and parse the response as JSON.
+    pub(crate) async fn request_json<T: serde::de::DeserializeOwned>(
+        &self,
+        method: Method,
+        endpoint: &str,
+        body: Option<&serde_json::Value>,
+        query_params: Option<&[(&str, &str)]>,
+    ) -> Result<T> {
+        let resp = self.request(method, endpoint, body, query_params).await?;
+
+        if tracing::enabled!(tracing::Level::TRACE) {
+            // Only log the response body if trace logging is enabled to avoid unnecessary overhead
+            let response_text = resp.text().await.unwrap_or_default();
+            trace!(body = %response_text, "Response");
+
+            Ok(serde_json::from_str(&response_text)
+                .map_err(|e| Error::InvalidJson(format!("Failed to parse response body: {e:?}")))?)
+        } else {
+            Ok(resp
+                .json()
+                .await
+                .map_err(|e| Error::InvalidJson(format!("Failed to parse response body: {e:?}")))?)
+        }
+    }
+
+    /// Make a request and return the raw [`reqwest::Response`].
     pub(crate) async fn request(
         &self,
         method: Method,
@@ -369,35 +387,35 @@ impl PaperlessClient {
         body: Option<&serde_json::Value>,
         query_params: Option<&[(&str, &str)]>,
     ) -> Result<reqwest::Response> {
-        let mut endpoint_query = endpoint.to_string();
-        let mut first_param = true;
-
-        if let Some(params) = query_params {
-            for param in params {
-                if first_param {
-                    endpoint_query.push('?');
-                    first_param = false;
-                } else {
-                    endpoint_query.push('&');
-                }
-                let _ = write!(endpoint_query, "{}={}", param.0, param.1);
-            }
-        }
-
         let mut req = self
             .client
-            .request(method, format!("{}{endpoint_query}", self.base_url))
+            .request(method, format!("{}{endpoint}", self.base_url))
             .header(ACCEPT, "application/json");
+
+        if let Some(params) = query_params {
+            req = req.query(params);
+        }
 
         // Set payload body if provided
         if let Some(json_body) = body {
             req = req.json(json_body);
         }
 
-        let resp = req
-            .send()
+        let req = req.build().map_err(|e| Error::Request(e.into()))?;
+        debug!(
+            method = ?req.method(),
+            url = ?req.url(),
+            body = ?req.body(),
+            "Sending request to Paperless API");
+
+        let resp = self
+            .client
+            .execute(req)
             .await
             .map_err(|e| Error::Other(format!("Failed to send request: {e}")))?;
+
+        // Log the response body for debugging
+        debug!(status = ?resp.status(), "Response");
 
         if resp.status() == StatusCode::NOT_FOUND {
             return Err(Error::NotFound);
@@ -413,18 +431,6 @@ impl PaperlessClient {
         Ok(resp)
     }
 
-    pub(crate) async fn request_with_body(
-        &self,
-        method: Method,
-        endpoint: &str,
-        body: &impl serde::Serialize,
-        query_params: Option<&[(&str, &str)]>,
-    ) -> Result<reqwest::Response> {
-        let body = serde_json::to_value(body).map_err(|e| Error::Other(e.to_string()))?;
-        self.request(method, endpoint, Some(&body), query_params)
-            .await
-    }
-
     pub(crate) async fn fetch_all_pages<T: for<'de> Deserialize<'de>>(
         &self,
         endpoint: &str,
@@ -438,22 +444,19 @@ impl PaperlessClient {
         let mut current_url = Some(endpoint.to_string());
 
         while let Some(url) = current_url {
-            let resp = self
-                .request(Method::GET, &url, None, all_query_params.as_deref())
-                .await?;
+            debug!("Fetching page: {url}");
 
-            let page: PaginatedResponse<T> = resp.json().await.map_err(|e| {
-                Error::InvalidJson(format!(
-                    "Failed to parse paginated response for {endpoint}: {e:?}"
-                ))
-            })?;
+            let page: PaginatedResponse<T> = self
+                .request_json(Method::GET, &url, None, all_query_params.as_deref())
+                .await?;
 
             results.extend(page.results);
 
             current_url = page.next.and_then(|next_url| {
                 // Extract just the path from the full URL
                 next_url
-                    .trim_start_matches(&*self.base_url)
+                    .strip_prefix(&*self.base_url)
+                    .unwrap_or(&next_url)
                     .to_string()
                     .into()
             });
@@ -497,12 +500,12 @@ impl PaperlessClient {
             )
             .await?;
 
-        trace!("get_task_status response: {:?}", resp);
-
         let body = resp
             .text()
             .await
             .map_err(|e| Error::Other(format!("Failed to read response body: {e:?}")))?;
+
+        trace!("get_task_status response: {:?}", body);
 
         let tasks: Vec<Task> = match serde_json::from_str(&body) {
             Ok(t) => t,
@@ -528,22 +531,12 @@ impl PaperlessClient {
         self.fetch_all_pages("/api/saved_views/", None)
     }
 
-    pub async fn get_statistics(&self) -> Result<util::Statistics> {
-        self.request(Method::GET, "/api/statistics/", None, None)
-            .await
-            .map_err(|e| Error::Other(format!("Failed to send request: {e}")))?
-            .json()
-            .await
-            .map_err(|e| Error::Other(format!("Failed to parse response body: {e:?}")))
+    pub fn get_statistics(&self) -> impl Future<Output = Result<util::Statistics>> {
+        self.request_json(Method::GET, "/api/statistics/", None, None)
     }
 
-    pub async fn get_status(&self) -> Result<util::ServerStatus> {
-        self.request(Method::GET, "/api/status/", None, None)
-            .await
-            .map_err(|e| Error::Other(format!("Failed to send request: {e}")))?
-            .json()
-            .await
-            .map_err(|e| Error::Other(format!("Failed to parse response body: {e:?}")))
+    pub fn get_status(&self) -> impl Future<Output = Result<util::Statistics>> {
+        self.request_json(Method::GET, "/api/status/", None, None)
     }
 
     /// Create a new item in Paperless.
@@ -553,23 +546,27 @@ impl PaperlessClient {
     /// Returns the created item
     pub async fn create<T: Item>(&self, new_item: T::CreateDto) -> Result<T::BaseType> {
         let url = format!("/api/{}/", T::endpoint());
-        let resp = self
-            .request_with_body(Method::POST, &url, &new_item, None)
-            .await?;
-
-        resp.json::<T::BaseType>()
-            .await
-            .map_err(|e| Error::Other(format!("Failed to parse response body: {e:?}")))
+        self.request_json(
+            Method::POST,
+            &url,
+            Some(&serde_json::to_value(&new_item).map_err(|e| Error::Other(e.to_string()))?),
+            None,
+        )
+        .await
     }
 
     /// Updates an existing item in Paperless.
     ///
     /// All structs which implement [`UpdateDtoObject`](crate::dto::UpdateDtoObject) can be used as `item`.
-    pub async fn update<T: Item>(&self, id: T::Id, item: T::UpdateDto) -> Result<()> {
+    pub async fn update<T: Item>(&self, id: T::Id, update: T::UpdateDto) -> Result<()> {
         let url = format!("/api/{}/{}/", T::endpoint(), id);
-        self.request_with_body(Method::PATCH, &url, &item, None)
-            .await?;
-        Ok(())
+        self.request_json(
+            Method::PATCH,
+            &url,
+            Some(&serde_json::to_value(&update).map_err(|e| Error::Other(e.to_string()))?),
+            None,
+        )
+        .await
     }
 
     /// Deletes an existing item in Paperless.
@@ -583,12 +580,13 @@ impl PaperlessClient {
     ///
     /// Returns the task ID on success.
     pub async fn upload_document(&self, file_path: &Path, filename: &str) -> Result<TaskId> {
-        let file_bytes = std::fs::read(file_path)
-            .map_err(|e| Error::Other(format!("Failed to read file: {e}")))?;
+        let stream = tokio::fs::File::open(file_path)
+            .await
+            .map_err(|e| Error::Other(format!("Failed to open file: {e}")))?;
 
         let form = multipart::Form::new().part(
             "document",
-            multipart::Part::bytes(file_bytes).file_name(filename.to_string()),
+            multipart::Part::stream(stream).file_name(filename.to_string()),
         );
 
         let url = format!("{}/api/documents/post_document/", self.base_url);

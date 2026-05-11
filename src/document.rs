@@ -13,14 +13,9 @@ use std::{fmt::Display, sync::Arc, time::Duration};
 use chrono::{DateTime, NaiveDate, Utc};
 use derive_more::Display;
 use enumflags2::{BitFlags, bitflags};
-
-#[cfg(feature = "tokio-fs")]
 use futures_util::TryStreamExt;
-
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "tokio-fs")]
 use tokio::io::AsyncWriteExt;
 
 use paperless_api_macros::UpdateDto;
@@ -57,7 +52,7 @@ pub struct Document {
 }
 
 #[derive(Debug, Clone, Deserialize, UpdateDto)]
-pub struct DocumentData {
+pub(crate) struct DocumentData {
     #[dto(skip)]
     id: DocumentId,
 
@@ -493,10 +488,10 @@ impl Document {
         };
 
         self.client
-            .request_with_body(
+            .request(
                 Method::PATCH,
                 &format!("/api/documents/{}/", self.data.id),
-                &patch,
+                Some(&serde_json::to_value(&patch).map_err(|e| Error::Other(e.to_string()))?),
                 None,
             )
             .await?;
@@ -562,7 +557,6 @@ impl Document {
     }
 
     /// Download the document to a file, requires the `tokio-fs` feature.
-    #[cfg(feature = "tokio-fs")]
     pub async fn download_to_file(&self, path: &std::path::Path) -> Result<()> {
         self.fail_if_deleted()?;
 
@@ -587,17 +581,15 @@ impl Document {
             .await
             .map_err(|e| Error::Other(format!("Failed to create file: {e}")))?;
 
-        let mut stream = resp.bytes_stream();
-
-        while let Some(chunk) = stream
-            .try_next()
-            .await
-            .map_err(|e| Error::Other(format!("Failed to read response body: {e}")))?
-        {
-            file.write_all(&chunk)
-                .await
-                .map_err(|e| Error::Other(format!("Failed to write file: {e}")))?;
-        }
+        resp.bytes_stream()
+            .map_err(|e| Error::Other(format!("Failed to read document chunk: {e}")))
+            .try_fold(&mut file, |file, chunk| async move {
+                file.write_all(&chunk).await.map_err(|e| {
+                    Error::Other(format!("Failed to save document chunk to file: {e}"))
+                })?;
+                Ok(file)
+            })
+            .await?;
 
         Ok(())
     }
@@ -620,24 +612,22 @@ impl Document {
     ) -> Result<ShareLink> {
         self.fail_if_deleted()?;
 
-        let resp = self
+        let mut share_link = self
             .client
-            .request_with_body(
+            .request_json::<ShareLink>(
                 Method::POST,
                 "/api/share_links/",
-                &CreateShareLink {
-                    document: self.id(),
-                    expiration: expires,
-                    file_version: version,
-                },
+                Some(
+                    &serde_json::to_value(&CreateShareLink {
+                        document: self.id(),
+                        expiration: expires,
+                        file_version: version,
+                    })
+                    .map_err(|e| Error::Other(e.to_string()))?,
+                ),
                 None,
             )
             .await?;
-
-        let mut share_link: ShareLink = resp
-            .json()
-            .await
-            .map_err(|e| Error::Other(format!("Failed to generate share link: {e:?}")))?;
 
         share_link.base_url = self.client.base_url.clone();
         Ok(share_link)
