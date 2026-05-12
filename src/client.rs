@@ -31,7 +31,7 @@ use crate::{
 
 /// Selects which cached metadata to refresh.
 ///
-/// Cached data is data which is rarly updated,
+/// Cached data is data which is rarely updated;
 /// refreshing it is normally not necessary on every request.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Sequence)]
 #[non_exhaustive]
@@ -51,7 +51,7 @@ pub struct PaperlessClient {
     /// Whether to request full permissions data for items.
     pub request_full_permissions: bool,
 
-    /// Whether to request always request the full document content.
+    /// Whether to always request the full document content.
     pub request_full_content: bool,
 
     pub(crate) base_url: Arc<str>,
@@ -204,10 +204,6 @@ impl PaperlessClient {
     /// Refresh and cache all metadata.
     ///
     /// Only updates the cache for this instance, cloned instances will not see the changes.
-    ///
-    /// # Arguments
-    ///
-    /// * `full_permissions` - Whether to use request full permissions data for the items.
     pub async fn refresh_all(&mut self) -> Result<()> {
         self.refresh(enum_iterator::all::<RefreshMetaData>()).await
     }
@@ -523,19 +519,23 @@ impl PaperlessClient {
         Ok(tasks)
     }
 
+    /// Get all workflows.
     pub fn get_workflows(&self) -> impl Future<Output = Result<Vec<Workflow>>> {
         self.fetch_all_pages("/api/workflows/", None)
     }
 
+    /// Get all saved views.
     pub fn get_saved_views(&self) -> impl Future<Output = Result<Vec<SavedView>>> {
         self.fetch_all_pages("/api/saved_views/", None)
     }
 
+    /// Get server statistics.
     pub fn get_statistics(&self) -> impl Future<Output = Result<util::Statistics>> {
         self.request_json(Method::GET, "/api/statistics/", None, None)
     }
 
-    pub fn get_status(&self) -> impl Future<Output = Result<util::Statistics>> {
+    /// Get server status.
+    pub fn get_status(&self) -> impl Future<Output = Result<util::ServerStatus>> {
         self.request_json(Method::GET, "/api/status/", None, None)
     }
 
@@ -543,7 +543,7 @@ impl PaperlessClient {
     ///
     /// All structs which implement [`CreateDtoObject`](crate::dto::CreateDtoObject) can be used as `new_item`.
     ///
-    /// Returns the created item
+    /// Returns the created item.
     pub async fn create<T: Item>(&self, new_item: T::CreateDto) -> Result<T::BaseType> {
         let url = format!("/api/{}/", T::endpoint());
         self.request_json(
@@ -614,32 +614,34 @@ impl PaperlessClient {
         Ok(TaskId(task_id))
     }
 
-    /// Get the tags cache
+    /// Get the tags cache.
     #[inline]
     #[must_use]
     pub fn tags(&self) -> &HashMap<TagId, Tag> {
         &self.cached_data.tags
     }
 
-    /// Get the storage-path cache
+    /// Get the storage paths cache.
     #[inline]
     #[must_use]
     pub fn storage_paths(&self) -> &HashMap<StoragePathId, StoragePath> {
         &self.cached_data.storage_paths
     }
 
+    /// Find a tag by its name.
     #[must_use]
     pub fn find_tag_by_name(&self, name: &str) -> Option<&Tag> {
         self.cached_data.tags.values().find(|tag| tag.name == name)
     }
 
-    /// Get the document-types cache
+    /// Get the document types cache.
     #[inline]
     #[must_use]
     pub fn document_types(&self) -> &HashMap<DocumentTypeId, DocumentType> {
         &self.cached_data.document_types
     }
 
+    /// Find a document type by its name.
     #[must_use]
     pub fn find_document_type_by_name(&self, name: &str) -> Option<&DocumentType> {
         self.cached_data
@@ -648,20 +650,21 @@ impl PaperlessClient {
             .find(|dt| dt.name == name)
     }
 
-    /// Get the correspondents cache
+    /// Get the correspondents cache.
     #[inline]
     #[must_use]
     pub fn correspondents(&self) -> &HashMap<CorrespondentId, Correspondent> {
         &self.cached_data.correspondents
     }
 
-    /// Get the custom fields cache
+    /// Get the custom fields cache.
     #[inline]
     #[must_use]
     pub fn custom_fields(&self) -> &HashMap<CustomFieldId, CustomField> {
         &self.cached_data.custom_fields
     }
 
+    /// Find a custom field by its name.
     #[must_use]
     pub fn find_custom_field_by_name(&self, name: &str) -> Option<&CustomField> {
         self.cached_data
@@ -670,14 +673,14 @@ impl PaperlessClient {
             .find(|field| field.name == name)
     }
 
-    /// Get the users cache
+    /// Get the users cache.
     #[inline]
     #[must_use]
     pub fn users(&self) -> &HashMap<UserId, User> {
         &self.cached_data.users
     }
 
-    /// Get the groups cache
+    /// Get the groups cache.
     #[inline]
     #[must_use]
     pub fn groups(&self) -> &HashMap<GroupId, Group> {

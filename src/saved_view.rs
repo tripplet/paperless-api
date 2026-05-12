@@ -45,12 +45,13 @@ pub struct SavedView {
     #[dto(skip)]
     pub owner: Option<crate::id::UserId>,
 
-    /// Whether the user can change the saved view.
+    /// Permissions for the saved view.
     #[dto(skip)]
     #[serde(flatten)]
     pub permissions: ItemPermissions,
 }
 
+/// The display mode of a saved view.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum DisplayMode {
@@ -59,14 +60,18 @@ pub enum DisplayMode {
     LargeCards,
 }
 
+/// A filter rule for a saved view.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct FilterRule {
+    /// The type of filter rule.
     #[serde(rename = "rule_type")]
     pub rule: FilterRuleType,
 
+    /// The value associated with the filter rule.
     pub value: Option<String>,
 }
 
+/// The type of a filter rule.
 #[derive(Debug, Clone, Copy, Display)]
 #[repr(u8)]
 pub enum FilterRuleType {

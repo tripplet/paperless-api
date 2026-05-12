@@ -7,7 +7,7 @@ use paperless_api_macros::{CreateDto, Item, UpdateDto};
 use super::MatchAlgorithm;
 use crate::id::TagId;
 
-/// A document tag
+/// A document tag.
 #[derive(Debug, Clone, Deserialize, Serialize, CreateDto, UpdateDto, Item)]
 #[api_info(endpoint = "tags")]
 pub struct Tag {

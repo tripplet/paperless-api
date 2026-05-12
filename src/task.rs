@@ -3,15 +3,16 @@
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 
-/// A paperless task
+/// A paperless task.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Task {
+    /// Unique identifier of the task.
     pub id: u32,
 
     /// The Celery-ID of the task.
     pub task_id: crate::id::TaskId,
 
-    /// The name/king of the task.
+    /// The name/kind of the task.
     #[serde(rename = "task_name")]
     pub name: TaskName,
 
@@ -22,10 +23,16 @@ pub struct Task {
     /// The status of the task.
     pub status: TaskStatus,
 
+    /// The user who owns the task.
     pub owner: crate::id::UserId,
 
+    /// Whether the task has been acknowledged.
     pub acknowledged: bool,
+
+    /// The result of the task, if any.
     pub result: Option<String>,
+
+    /// The ID of the related document, if any.
     pub related_document: Option<String>,
 }
 

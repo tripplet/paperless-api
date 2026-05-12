@@ -7,7 +7,7 @@ use paperless_api_macros::{CreateDto, Item, UpdateDto};
 use super::MatchAlgorithm;
 use super::permission::ItemPermissions;
 
-/// A document type
+/// A document type.
 #[derive(Debug, Clone, Deserialize, Serialize, CreateDto, UpdateDto, Item)]
 #[api_info(endpoint = "document_types")]
 pub struct DocumentType {
@@ -40,7 +40,7 @@ pub struct DocumentType {
     /// Owner of the document type.
     pub owner: Option<crate::id::UserId>,
 
-    /// The permissions for this tag.
+    /// The permissions for this document type.
     #[dto(skip)]
     #[serde(flatten)]
     pub permissions: ItemPermissions,

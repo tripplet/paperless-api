@@ -70,36 +70,56 @@ pub struct ServerStatus {
     pub tasks: StatusTask,
 }
 
+/// Storage information for the server.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Storage {
+    /// Total storage in bytes.
     pub total: u64,
+
+    /// Available storage in bytes.
     pub available: u64,
 }
 
+/// Database information.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(from = "RawDatabase")]
 pub struct Database {
+    /// Type of the database.
     pub db_type: String,
+
+    /// URL of the database.
     pub url: String,
+
+    /// Health status of the database.
     pub status: Health,
+
+    /// Migration status of the database.
     pub migration_status: MigrationStatus,
 }
 
+/// Migration status of the database.
 #[derive(Debug, Clone, Deserialize)]
 pub struct MigrationStatus {
-    pub latest_migration: String,
+    /// The latest applied migration.
+    pub latest_migration: Option<String>,
+
+    /// Unapplied migrations.
     pub unapplied_migrations: Vec<String>,
 }
 
+/// Health status of a component.
 #[derive(Debug, Clone, Deserialize)]
 pub enum Health {
+    /// The component is healthy.
     #[serde(rename = "OK")]
     Ok,
 
+    /// The component is not healthy, with an error message.
     #[serde(untagged)]
     NotOk(String),
 }
 
+/// Task status information.
 #[derive(Debug, Clone, Deserialize)]
 pub struct StatusTask {
     #[serde(flatten)]
@@ -118,38 +138,58 @@ pub struct StatusTask {
     pub classifier: ClassifierStatus,
 }
 
+/// Redis status information.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(from = "RawRedisStatus")]
 pub struct RedisStatus {
+    /// URL of the Redis server.
     pub url: String,
+
+    /// Health status of Redis.
     pub status: Health,
 }
 
+/// Celery status information.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(from = "RawCeleryStatus")]
 pub struct CeleryStatus {
+    /// Health status of Celery.
     pub status: Health,
+
+    /// URL of the Celery broker.
     pub url: String,
 }
 
+/// Index status information.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(from = "RawIndexStatus")]
 pub struct IndexStatus {
+    /// Health status of the index.
     pub status: Health,
+
+    /// When the index was last modified.
     pub last_modified: Option<chrono::DateTime<chrono::Utc>>,
 }
 
+/// Classifier status information.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(from = "RawClassifierStatus")]
 pub struct ClassifierStatus {
+    /// Health status of the classifier.
     pub status: Health,
+
+    /// When the classifier was last trained.
     pub last_trained: Option<chrono::DateTime<chrono::Utc>>,
 }
 
+/// Sanity check status information.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(from = "RawSanityCheckStatus")]
 pub struct SanityCheckStatus {
+    /// Health status of the sanity check.
     pub status: Health,
+
+    /// When the sanity check was last run.
     pub last_run: Option<chrono::DateTime<chrono::Utc>>,
 }
 

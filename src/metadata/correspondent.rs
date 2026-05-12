@@ -7,7 +7,7 @@ use paperless_api_macros::{CreateDto, Item, UpdateDto};
 use super::MatchAlgorithm;
 use super::permission::ItemPermissions;
 
-/// A correspondent
+/// A correspondent.
 #[derive(Debug, Clone, Deserialize, Serialize, CreateDto, UpdateDto, Item)]
 #[api_info(endpoint = "correspondents")]
 pub struct Correspondent {
@@ -22,14 +22,14 @@ pub struct Correspondent {
     /// Name of the correspondent.
     pub name: String,
 
-    /// Matching pattern for the tag.
+    /// Matching pattern for the correspondent.
     #[serde(rename = "match")]
     pub match_pattern: String,
 
-    /// Matching algorithm for the tag.
+    /// Matching algorithm for the correspondent.
     pub matching_algorithm: MatchAlgorithm,
 
-    /// Whether the tag matching is case-insensitive.
+    /// Whether the correspondent matching is case-insensitive.
     pub is_insensitive: bool,
 
     /// The number of documents associated with this correspondent.

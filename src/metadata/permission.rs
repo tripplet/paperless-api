@@ -8,10 +8,10 @@ use crate::id::{GroupId, UserId};
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum ItemPermissions {
-    /// Full permissions
+    /// Full permissions.
     Full { permissions: FullPermissions },
 
-    /// Simple permissions
+    /// Simple permissions.
     Simple { user_can_change: bool },
 }
 

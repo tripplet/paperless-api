@@ -406,8 +406,10 @@ impl Document {
         Ok(())
     }
 
-    /// Get the document thumbnail
-    pub async fn tumb(&self) -> Result<Vec<u8>> {
+    /// Get the document thumbnail.
+    ///
+    /// Returns the raw thumbnail image data.
+    pub async fn thumbnail(&self) -> Result<Vec<u8>> {
         let resp = self
             .client
             .request(
@@ -500,6 +502,7 @@ impl Document {
         Ok(())
     }
 
+    /// Delete the document
     pub async fn delete(&mut self) -> Result<()> {
         self.client
             .request(

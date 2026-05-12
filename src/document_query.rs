@@ -1,10 +1,11 @@
-//! Query for Documents using the [`DocumentQueryBuilder`]
+//! Query for documents using the [`DocumentQueryBuilder`].
 
 use crate::{
     document::ArchiveSerialNumber,
     id::{CorrespondentId, TagId},
 };
 
+/// Builder for constructing document queries.
 #[derive(Default)]
 pub struct DocumentQueryBuilder {
     archive_serial_number: Option<ArchiveSerialNumber>,
@@ -16,6 +17,7 @@ pub struct DocumentQueryBuilder {
     full_permissions: bool,
 }
 
+/// A constructed document query.
 pub struct DocumentQuery {
     pub(crate) query: Vec<(&'static str, String)>,
 }
@@ -78,6 +80,7 @@ impl DocumentQueryBuilder {
         self
     }
 
+    /// Builds the query.
     #[must_use]
     pub fn build(self) -> DocumentQuery {
         let mut query = vec![];

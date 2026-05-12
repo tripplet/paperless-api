@@ -2,18 +2,18 @@
 //!
 //! Paperless uses numeric IDs for most entities.
 //! To avoid confusion, ID types are defined as wrappers around the underlying numeric type.
-//! e.g. DocumentId(u32)
+//! e.g. `DocumentId(u32)`.
 
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 
-/// Empty marker trait for Paperless ID types.
+/// Marker trait for Paperless ID types.
 pub trait PaperlessId:
     std::fmt::Display + PartialEq + Eq + std::hash::Hash + serde::de::DeserializeOwned + Serialize
 {
 }
 
-/// Macro for defining ID wrapper types
+/// Macro for defining ID wrapper types.
 macro_rules! define_ids {
     ($($def:tt),* $(,)?) => {
         $(define_ids!(@single $def);)*
@@ -22,6 +22,7 @@ macro_rules! define_ids {
     (@single ($name:ident, $type:ty)) => {
         #[derive(Clone, Copy, Display, Default, PartialEq, Eq, Hash, Deserialize, Serialize)]
         #[repr(transparent)]
+        /// ID type for a Paperless entity.
         pub struct $name(pub $type);
 
         impl std::fmt::Debug for $name {
@@ -42,6 +43,7 @@ macro_rules! define_ids {
     (@single ($name:ident, $type:ty, noncopy)) => {
         #[derive(Clone, Display, Default, PartialEq, Eq, Hash, Deserialize, Serialize)]
         #[repr(transparent)]
+        /// ID type for a Paperless entity (non-copy).
         pub struct $name(pub $type);
 
         impl std::fmt::Debug for $name {

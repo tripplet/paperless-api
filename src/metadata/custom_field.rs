@@ -29,7 +29,7 @@ pub struct CustomField {
     pub document_count: u32,
 }
 
-/// Custom field value of an existing document
+/// Custom field value of an existing document.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct DocumentCustomField {
     /// Unique identifier of the custom field.
@@ -39,18 +39,27 @@ pub struct DocumentCustomField {
     pub value: String,
 }
 
+/// Extra data for a custom field.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CustomFieldExtraData {
+    /// Default currency for monetary fields.
     pub default_currency: Option<String>,
+
+    /// Selectable options for select fields.
     pub select_options: Option<Vec<SelectableOption>>,
 }
 
+/// A selectable option for a custom field.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct SelectableOption {
+    /// Unique identifier of the option.
     pub id: SelectableOptionId,
+
+    /// Label of the option.
     pub label: String,
 }
 
+/// Data type of a custom field.
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum CustomFieldDataType {

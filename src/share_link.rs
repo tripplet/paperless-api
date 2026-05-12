@@ -21,7 +21,7 @@ pub enum ShareLinkFileVersion {
     Original,
 }
 
-/// A share link
+/// A share link.
 #[derive(Debug, Clone, Deserialize, CreateDto)]
 #[api_info(private, endpoint = "share_links")]
 pub struct ShareLink {
@@ -46,12 +46,14 @@ pub struct ShareLink {
     #[dto(skip)]
     pub slug: String,
 
+    /// Base URL of the Paperless instance, used to generate the share link URL.
     #[serde(skip)]
     #[dto(skip)]
     pub(crate) base_url: Arc<str>,
 }
 
 impl ShareLink {
+    /// Returns the full URL of the share link.
     #[must_use]
     pub fn url(&self) -> String {
         format!("{}/share/{}", self.base_url, self.slug)

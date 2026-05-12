@@ -3,7 +3,7 @@
 use paperless_api_macros::{CreateDto, Item, UpdateDto};
 use serde::Deserialize;
 
-/// A paperless user
+/// A paperless user.
 #[derive(Debug, Clone, Deserialize, CreateDto, UpdateDto, Item)]
 #[api_info(endpoint = "users")]
 pub struct User {
@@ -11,10 +11,10 @@ pub struct User {
     #[dto(skip)]
     pub id: crate::id::UserId,
 
-    /// Username
+    /// Username.
     pub username: String,
 
-    /// Email address
+    /// Email address.
     pub email: String,
 
     /// First name of the user.
