@@ -558,9 +558,9 @@ impl PaperlessClient {
     /// Updates an existing item in Paperless.
     ///
     /// All structs which implement [`UpdateDtoObject`](crate::dto::UpdateDtoObject) can be used as `item`.
-    pub async fn update<T: Item>(&self, id: T::Id, update: T::UpdateDto) -> Result<()> {
+    pub async fn update<T: Item>(&self, id: T::Id, update: &T::UpdateDto) -> Result<T::BaseType> {
         let url = format!("/api/{}/{}/", T::endpoint(), id);
-        self.request_json(
+        self.request_json::<T::BaseType>(
             Method::PATCH,
             &url,
             Some(&serde_json::to_value(&update).map_err(|e| Error::Other(e.to_string()))?),
