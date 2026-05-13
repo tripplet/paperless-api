@@ -4,8 +4,11 @@ use serde::Serialize;
 
 use crate::id::PaperlessId;
 
-/// Trait for DTOs used to create new items.
+/// Marker trait for DTOs used to create new items.
 pub trait CreateDtoObject: Serialize {}
+
+/// Marker trait for DTOs used to update existing items.
+pub trait UpdateDtoObject: Serialize {}
 
 /// Trait for items that can be managed via the Paperless API.
 pub trait Item {
@@ -27,6 +30,3 @@ pub trait Item {
     /// Returns the ID of this item.
     fn id(&self) -> Self::Id;
 }
-
-/// Marker trait for DTOs used to update existing items.
-pub trait UpdateDtoObject: Serialize {}

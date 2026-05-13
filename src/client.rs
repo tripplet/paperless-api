@@ -398,11 +398,21 @@ impl PaperlessClient {
         }
 
         let req = req.build().map_err(|e| Error::Request(e.into()))?;
-        debug!(
-            method = ?req.method(),
-            url = ?req.url(),
-            body = ?req.body(),
-            "Sending request to Paperless API");
+
+        if tracing::enabled!(tracing::Level::TRACE)
+            && let Some(body) = req.body().map(|b| b.as_bytes()).flatten()
+        {
+            trace!(
+                method = ?req.method(),
+                url = ?req.url(),
+                body = %String::from_utf8_lossy(body),
+                "Sending request to Paperless API");
+        } else {
+            debug!(
+                method = ?req.method(),
+                url = ?req.url(),
+                "Sending request to Paperless API");
+        }
 
         let resp = self
             .client
@@ -544,7 +554,7 @@ impl PaperlessClient {
     /// All structs which implement [`CreateDtoObject`](crate::dto::CreateDtoObject) can be used as `new_item`.
     ///
     /// Returns the created item.
-    pub async fn create<T: Item>(&self, new_item: T::CreateDto) -> Result<T::BaseType> {
+    pub async fn create<T: Item>(&self, new_item: &T::CreateDto) -> Result<T::BaseType> {
         let url = format!("/api/{}/", T::endpoint());
         self.request_json(
             Method::POST,

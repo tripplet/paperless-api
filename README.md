@@ -36,7 +36,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         "your-api-token",
         None,
     )?;
-    
+
     Ok(())
 }
 ```
@@ -65,8 +65,47 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             RefreshMetaData::Correspondents,
         ])
         .await?;
-    
+
     client.refresh_all().await?;
+
+    Ok(())
+}
+```
+
+## Creating and updating metadata
+
+You can create, update and delete metadata items such as tags, correspondents,
+document types, etc.
+See [`CreateDtoObject`](dto::CreateDtoObject) and [`UpdateDtoObject`](dto::UpdateDtoObject)
+
+```rust,no_run
+use paperless_api::metadata::{MatchAlgorithm, tag::*};
+
+async fn run() -> Result<(), Box<dyn std::error::Error>> {
+    let client = paperless_api::PaperlessClient::new(
+        "https://paperless.example.com",
+        "your-api-token",
+        None,
+    )?;
+
+    // Create a new tag
+    let created = client.create::<Tag>(&CreateTag {
+        name: "invoices".to_string(),
+        color: "#ff0000".to_string(),
+        ..Default::default()
+    }).await?;
+
+    // Update the tag
+    client.update::<Tag>(created.id, &UpdateTag {
+        name: Some("paid invoices".to_string()),
+        match_pattern: Some("invoice".to_string()),
+        matching_algorithm: Some(MatchAlgorithm::AnyWord),
+        is_insensitive: Some(true),
+        ..Default::default()
+    }).await?;
+
+    // Delete a tag
+    client.delete::<Tag>(created.id).await?;
 
     Ok(())
 }
@@ -77,13 +116,10 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 If your paperless instance requires additional headers to be accessed, you can provide them during client creation:
 
 ```rust,no_run
-use std::collections::HashMap;
-use paperless_api::PaperlessClient;
-
-let mut headers = HashMap::new();
+let mut headers = std::collections::HashMap::new();
 headers.insert("X-Custom-Header".to_string(), "value".to_string());
 
-let client = PaperlessClient::new(
+let client = paperless_api::PaperlessClient::new(
     "https://paperless.example.com",
     "your-api-token",
     Some(&headers),
