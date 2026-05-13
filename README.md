@@ -1,7 +1,7 @@
 # paperless-api &emsp; [![build]][ci] [![Latest Version]][crates.io] [![Docs]][docs.rs]
 
 [build]: https://github.com/tripplet/paperless-api/actions/workflows/ci.yml/badge.svg
-[ci]: https://github.com/tripplet/paperless-api/actions/workflows/ci.ym
+[ci]: https://github.com/tripplet/paperless-api/actions/workflows/ci.yml
 
 [Latest Version]: https://img.shields.io/crates/v/paperless-api.svg
 [crates.io]: https://crates.io/crates/paperless-api
