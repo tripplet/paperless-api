@@ -178,9 +178,7 @@ impl PaperlessClient {
         debug!("Loading {}", T::endpoint());
         let endpoint = format!("/api/{}/", T::endpoint());
 
-        let items: Vec<T> = self
-            .fetch_all_pages(&endpoint, self.default_query_params().as_deref())
-            .await?;
+        let items: Vec<T> = self.fetch_all_pages(&endpoint, None).await?;
         Ok(items.into_iter().map(|item| (item.id(), item)).collect())
     }
 
