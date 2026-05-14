@@ -1,4 +1,5 @@
 mod derive_base;
+mod repr_serde;
 
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};

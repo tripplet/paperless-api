@@ -1,7 +1,7 @@
 //! Types related to saved views in the paperless UI.
 
 use derive_more::Display;
-use paperless_api_macros::{CreateDto, Item, UpdateDto};
+use paperless_api_macros::{CreateDto, Item, ReprSerde, UpdateDto};
 use serde::{Deserialize, Serialize};
 
 use crate::metadata::permission::ItemPermissions;
@@ -72,7 +72,7 @@ pub struct FilterRule {
 }
 
 /// The type of a filter rule.
-#[derive(Debug, Clone, Copy, Display)]
+#[derive(Debug, Clone, Copy, Display, ReprSerde)]
 #[repr(u8)]
 pub enum FilterRuleType {
     TitleContains = 0,
@@ -125,38 +125,6 @@ pub enum FilterRuleType {
     MimeTypeIs = 47,
 
     Unknown(u8),
-}
-
-impl Serialize for FilterRuleType {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let value = if let FilterRuleType::Unknown(unknown) = self {
-            *unknown
-        } else {
-            // SAFETY: FilterRuleType must be a valid 0..=47
-            unsafe { *(std::ptr::from_ref::<FilterRuleType>(self)).cast::<u8>() }
-        };
-
-        serializer.serialize_u8(value)
-    }
-}
-
-impl<'de> serde::Deserialize<'de> for FilterRuleType {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let value = u8::deserialize(deserializer)?;
-
-        let enum_value = match value {
-            0..=47 => unsafe { std::mem::transmute::<u16, FilterRuleType>(u16::from(value)) },
-            _ => FilterRuleType::Unknown(value),
-        };
-
-        Ok(enum_value)
-    }
 }
 
 #[cfg(test)]
