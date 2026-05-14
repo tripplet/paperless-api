@@ -52,6 +52,7 @@ pub struct Document {
 }
 
 #[derive(Debug, Clone, Deserialize, UpdateDto)]
+#[api_info(endpoint = "documents", id = DocumentId)]
 pub(crate) struct DocumentData {
     #[dto(skip)]
     id: DocumentId,

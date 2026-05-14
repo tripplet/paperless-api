@@ -5,10 +5,11 @@ use std::collections::HashMap;
 use serde::Deserialize;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
-use paperless_api_macros::UpdateDto;
+use paperless_api_macros::{Item, UpdateDto};
 
 /// A workflow.
-#[derive(Debug, Clone, Deserialize, UpdateDto)]
+#[derive(Debug, Clone, Deserialize, Item, UpdateDto)]
+#[api_info(endpoint = "workflows")]
 pub struct Workflow {
     /// Unique identifier of the workflow.
     #[dto(skip)]

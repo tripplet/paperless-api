@@ -15,7 +15,7 @@ use crate::{
     Error, Group, Result, SavedView, User,
     document::{Document, DocumentData},
     document_query::DocumentQueryBuilder,
-    dto::Item,
+    dto::{CreateDto, Item, UpdateDto},
     id::{
         CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, GroupId, StoragePathId, TagId,
         TaskId, UserId,
@@ -400,7 +400,7 @@ impl PaperlessClient {
         let req = req.build().map_err(|e| Error::Request(e.into()))?;
 
         if tracing::enabled!(tracing::Level::TRACE)
-            && let Some(body) = req.body().map(|b| b.as_bytes()).flatten()
+            && let Some(body) = req.body().and_then(|b| b.as_bytes())
         {
             trace!(
                 method = ?req.method(),
@@ -549,41 +549,57 @@ impl PaperlessClient {
         self.request_json(Method::GET, "/api/status/", None, None)
     }
 
-    /// Create a new item in Paperless.
+    /// Create a new item on the server.
     ///
     /// All structs which implement [`CreateDtoObject`](crate::dto::CreateDtoObject) can be used as `new_item`.
     ///
     /// Returns the created item.
-    pub async fn create<T: Item>(&self, new_item: &T::CreateDto) -> Result<T::BaseType> {
+    pub async fn create<T: CreateDto>(&self, new_item: &T) -> Result<T::BaseType> {
         let url = format!("/api/{}/", T::endpoint());
         self.request_json(
             Method::POST,
             &url,
-            Some(&serde_json::to_value(&new_item).map_err(|e| Error::Other(e.to_string()))?),
+            Some(&serde_json::to_value(new_item).map_err(|e| Error::Other(e.to_string()))?),
             None,
         )
         .await
     }
 
-    /// Updates an existing item in Paperless.
+    /// Updates an existing.
     ///
     /// All structs which implement [`UpdateDtoObject`](crate::dto::UpdateDtoObject) can be used as `item`.
-    pub async fn update<T: Item>(&self, id: T::Id, update: &T::UpdateDto) -> Result<T::BaseType> {
+    ///
+    /// Returns the updated item
+    pub async fn update<T: UpdateDto>(&self, id: T::Id, update: &T) -> Result<T::BaseType> {
         let url = format!("/api/{}/{}/", T::endpoint(), id);
         self.request_json::<T::BaseType>(
             Method::PATCH,
             &url,
-            Some(&serde_json::to_value(&update).map_err(|e| Error::Other(e.to_string()))?),
+            Some(&serde_json::to_value(update).map_err(|e| Error::Other(e.to_string()))?),
             None,
         )
         .await
     }
 
-    /// Deletes an existing item in Paperless.
+    /// Deletes an existing item.
+    ///
+    /// All structs which implement [`UpdateDtoObject`](crate::dto::UpdateDtoObject) can be used.
     pub async fn delete<T: Item>(&self, id: T::Id) -> Result<()> {
         let url = format!("/api/{}/{}/", T::endpoint(), id);
         self.request(Method::DELETE, &url, None, None).await?;
         Ok(())
+    }
+
+    /// Load an existing item directly from the server, bypassing the caches.
+    ///
+    /// All structs which implement [`Item`] can be used.
+    pub async fn load_by_id<T: Item>(&self, id: T::Id) -> Result<Option<T::BaseType>> {
+        let url = format!("/api/{}/{}/", T::endpoint(), id);
+        match self.request_json(Method::GET, &url, None, None).await {
+            found_item @ Ok(_) => found_item,
+            Err(Error::NotFound) => Ok(None),
+            err @ Err(_) => err,
+        }
     }
 
     /// Upload a document to Paperless.

@@ -1,4 +1,4 @@
-use quote::quote;
+use quote::{format_ident, quote};
 use syn::{Data, DeriveInput, Fields, Ident, Visibility, parse_quote};
 
 #[allow(dead_code)]
@@ -16,14 +16,11 @@ pub(crate) struct BaseStruct {
 
     /// The fields of the DTO struct.
     pub(crate) fields: Vec<syn::Field>,
-}
-
-pub(crate) struct ItemStruct {
-    /// The base struct for the Item.
-    pub(crate) base_struct: BaseStruct,
 
     /// The endpoint URL for the Item.
-    pub(crate) endpoint: String,
+    pub endpoint: String,
+
+    pub id_type: Ident,
 }
 
 impl DtoFieldAttributes {
@@ -49,7 +46,10 @@ impl TryFrom<DeriveInput> for BaseStruct {
     type Error = syn::Error;
 
     fn try_from(input: DeriveInput) -> syn::Result<Self> {
+        // Parse #[api_info(endpoint = "...")] attribute
+        let mut endpoint = None;
         let mut visiblity = input.vis;
+        let mut id_type = format_ident!("{}Id", input.ident);
 
         for attr in &input.attrs {
             if attr.path().is_ident("api_info") {
@@ -58,7 +58,11 @@ impl TryFrom<DeriveInput> for BaseStruct {
                         visiblity = parse_quote! { pub(crate) };
                     } else if meta.path.is_ident("endpoint") {
                         let value = meta.value()?;
-                        let _: syn::LitStr = value.parse()?;
+                        let lit: syn::LitStr = value.parse()?;
+                        endpoint = Some(lit.value());
+                    } else if meta.path.is_ident("id") {
+                        let value = meta.value()?;
+                        id_type = value.parse()?;
                     }
 
                     Ok(())
@@ -85,45 +89,19 @@ impl TryFrom<DeriveInput> for BaseStruct {
             }
         };
 
-        Ok(Self {
-            name: input.ident,
-            visiblity,
-            fields: fields.iter().cloned().collect(),
-        })
-    }
-}
-
-impl TryFrom<DeriveInput> for ItemStruct {
-    type Error = syn::Error;
-
-    fn try_from(input: DeriveInput) -> syn::Result<Self> {
-        let base_struct = BaseStruct::try_from(input.clone())?;
-
-        // Parse #[api_info(endpoint = "...")] attribute
-        let mut endpoint = None;
-        for attr in &input.attrs {
-            if attr.path().is_ident("api_info") {
-                attr.parse_nested_meta(|meta| {
-                    if meta.path.is_ident("endpoint") {
-                        let value = meta.value()?;
-                        let lit: syn::LitStr = value.parse()?;
-                        endpoint = Some(lit.value());
-                    }
-                    Ok(())
-                })?;
-            }
-        }
-
         let Some(endpoint) = endpoint else {
             return Err(syn::Error::new_spanned(
                 &input.ident,
-                "CreateDtoObject requires a #[api_info(endpoint = \"...\")] attribute",
+                "Derive requires #[api_info(endpoint = \"...\")] attribute",
             ));
         };
 
         Ok(Self {
-            base_struct,
+            name: input.ident,
+            visiblity,
+            id_type,
             endpoint,
+            fields: fields.iter().cloned().collect(),
         })
     }
 }
