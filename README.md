@@ -89,14 +89,14 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     // Create a new tag
-    let created = client.create::<Tag>(&CreateTag {
+    let created = client.create(&CreateTag {
         name: "invoices".to_string(),
         color: "#ff0000".to_string(),
         ..Default::default()
     }).await?;
 
     // Update the tag
-    client.update::<Tag>(created.id, &UpdateTag {
+    client.update(created.id, &UpdateTag {
         name: Some("paid invoices".to_string()),
         match_pattern: Some("invoice".to_string()),
         matching_algorithm: Some(MatchAlgorithm::AnyWord),
