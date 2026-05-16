@@ -24,7 +24,6 @@ pub fn derive_create_dto(input: TokenStream) -> TokenStream {
     let id_type_name = input_struct.id_type;
     let id_type_name = quote!(crate::id::#id_type_name);
 
-    let endpoint = input_struct.endpoint.clone();
     let name = input_struct.name;
 
     // Generate the final output with the trait implementation
@@ -35,11 +34,6 @@ pub fn derive_create_dto(input: TokenStream) -> TokenStream {
         impl crate::dto::CreateDto for #new_struct_name {
             type Id = #id_type_name;
             type BaseType = #name;
-
-            #[inline]
-            fn endpoint() -> &'static str {
-                #endpoint
-            }
         }
     })
 }
@@ -61,7 +55,6 @@ pub fn derive_update_dto(input: TokenStream) -> TokenStream {
     let id_type_name = input_struct.id_type;
     let id_type_name = quote!(crate::id::#id_type_name);
 
-    let endpoint = input_struct.endpoint.clone();
     let name = input_struct.name;
 
     // Generate the final output with the trait implementation
@@ -72,11 +65,6 @@ pub fn derive_update_dto(input: TokenStream) -> TokenStream {
         impl crate::dto::UpdateDto for #new_struct_name {
             type Id = #id_type_name;
             type BaseType = #name;
-
-            #[inline]
-            fn endpoint() -> &'static str {
-                #endpoint
-            }
         }
     })
 }

@@ -11,10 +11,6 @@ pub trait CreateDto: Serialize {
 
     /// The base type for the DTO.
     type BaseType: serde::de::DeserializeOwned;
-
-    /// Returns the API endpoint for this item.
-    #[must_use]
-    fn endpoint() -> &'static str;
 }
 
 /// Marker trait for DTOs used to update existing items.
@@ -24,10 +20,6 @@ pub trait UpdateDto: Serialize {
 
     /// The base type for the DTO.
     type BaseType: serde::de::DeserializeOwned;
-
-    /// Returns the API endpoint for this item.
-    #[must_use]
-    fn endpoint() -> &'static str;
 }
 
 /// Trait for items that can be managed via the Paperless API.

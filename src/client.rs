@@ -175,8 +175,8 @@ impl PaperlessClient {
 
     /// Loads all items of the given item type from the API.
     pub async fn load_items<T: Item + DeserializeOwned>(&self) -> Result<HashMap<T::Id, T>> {
-        debug!("Loading {}", T::endpoint());
         let endpoint = format!("/api/{}/", T::endpoint());
+        debug!(endpoint, "Loading");
 
         let items: Vec<T> = self.fetch_all_pages(&endpoint, None).await?;
         Ok(items.into_iter().map(|item| (item.id(), item)).collect())
@@ -570,8 +570,8 @@ impl PaperlessClient {
     /// All structs which implement [`CreateDtoObject`](crate::dto::CreateDtoObject) can be used as `new_item`.
     ///
     /// Returns the created item.
-    pub async fn create<T: CreateDto>(&self, new_item: &T) -> Result<T::BaseType> {
-        let url = format!("/api/{}/", T::endpoint());
+    pub async fn create<T: CreateDto + Item>(&self, new_item: &T) -> Result<<T as Item>::BaseType> {
+        let url = format!("/api/{}/", <T as Item>::endpoint());
         self.request_json(Method::POST, &url, Some(&new_item), None)
             .await
     }
@@ -581,9 +581,13 @@ impl PaperlessClient {
     /// All structs which implement [`UpdateDtoObject`](crate::dto::UpdateDtoObject) can be used as `item`.
     ///
     /// Returns the updated item
-    pub async fn update<T: UpdateDto>(&self, id: T::Id, update: &T) -> Result<T::BaseType> {
-        let url = format!("/api/{}/{}/", T::endpoint(), id);
-        self.request_json::<T::BaseType>(Method::PATCH, &url, Some(&update), None)
+    pub async fn update<T: UpdateDto + Item>(
+        &self,
+        id: <T as Item>::Id,
+        update: &T,
+    ) -> Result<<T as Item>::BaseType> {
+        let url = format!("/api/{}/{}/", <T as Item>::endpoint(), id);
+        self.request_json::<<T as Item>::BaseType>(Method::PATCH, &url, Some(&update), None)
             .await
     }
 
