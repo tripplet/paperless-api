@@ -36,6 +36,7 @@ pub fn derive_create_dto(input: TokenStream) -> TokenStream {
             type Id = #id_type_name;
             type BaseType = #name;
 
+            #[inline]
             fn endpoint() -> &'static str {
                 #endpoint
             }
@@ -72,6 +73,7 @@ pub fn derive_update_dto(input: TokenStream) -> TokenStream {
             type Id = #id_type_name;
             type BaseType = #name;
 
+            #[inline]
             fn endpoint() -> &'static str {
                 #endpoint
             }
@@ -102,10 +104,12 @@ pub fn derive_item_trait(input: TokenStream) -> TokenStream {
             type Id = #id_type_name;
             type BaseType = #name;
 
+            #[inline]
             fn endpoint() -> &'static str {
                 #endpoint
             }
 
+            #[inline]
             fn id(&self) -> Self::Id {
                 self.id
             }

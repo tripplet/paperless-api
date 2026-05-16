@@ -13,6 +13,7 @@ pub trait CreateDto: Serialize {
     type BaseType: serde::de::DeserializeOwned;
 
     /// Returns the API endpoint for this item.
+    #[must_use]
     fn endpoint() -> &'static str;
 }
 
@@ -25,6 +26,7 @@ pub trait UpdateDto: Serialize {
     type BaseType: serde::de::DeserializeOwned;
 
     /// Returns the API endpoint for this item.
+    #[must_use]
     fn endpoint() -> &'static str;
 }
 
@@ -37,8 +39,10 @@ pub trait Item {
     type BaseType: serde::de::DeserializeOwned;
 
     /// Returns the API endpoint for this item.
+    #[must_use]
     fn endpoint() -> &'static str;
 
     /// Returns the ID of this item.
+    #[must_use]
     fn id(&self) -> Self::Id;
 }
