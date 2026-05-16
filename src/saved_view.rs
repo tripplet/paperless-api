@@ -8,7 +8,7 @@ use crate::metadata::permission::ItemPermissions;
 
 /// A saved view in the paperless UI.
 #[derive(Debug, Default, Clone, Deserialize, Serialize, CreateDto, UpdateDto, Item)]
-#[api_info(endpoint = "saved_views")]
+
 pub struct SavedView {
     /// The ID of the saved view.
     #[dto(skip)]

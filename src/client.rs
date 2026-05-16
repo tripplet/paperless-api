@@ -17,8 +17,8 @@ use crate::{
     document_query::DocumentQueryBuilder,
     dto::{CreateDto, Item, UpdateDto},
     id::{
-        CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, GroupId, StoragePathId, TagId,
-        TaskId, UserId,
+        CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, GroupId, ItemId, StoragePathId,
+        TagId, TaskId, UserId,
     },
     metadata::{
         correspondent::Correspondent, custom_field::CustomField, document_type::DocumentType,
@@ -567,7 +567,7 @@ impl PaperlessClient {
 
     /// Create a new item on the server.
     ///
-    /// All structs which implement [`CreateDtoObject`](crate::dto::CreateDtoObject) can be used as `new_item`.
+    /// All structs which implement [`CreateDto`] can be used as `new_item`.
     ///
     /// Returns the created item.
     pub async fn create<T>(&self, new_item: &T) -> Result<T::BaseType>
@@ -582,7 +582,7 @@ impl PaperlessClient {
 
     /// Updates an existing.
     ///
-    /// All structs which implement [`UpdateDtoObject`](crate::dto::UpdateDtoObject) can be used as `item`.
+    /// All structs which implement [`UpdateDto`] can be used as `item`.
     ///
     /// Returns the updated item
     pub async fn update<T>(&self, id: T::Id, update: &T) -> Result<T::BaseType>
@@ -590,15 +590,15 @@ impl PaperlessClient {
         T: UpdateDto,
         T::BaseType: Item,
     {
-        let url = format!("/api/{}/{}/", <T::BaseType as Item>::endpoint(), id,);
+        let url = format!("/api/{}/{}/", <T::BaseType as Item>::endpoint(), id);
         self.request_json::<T::BaseType>(Method::PATCH, &url, Some(&update), None)
             .await
     }
 
     /// Deletes an existing item.
     ///
-    /// All structs which implement [`UpdateDtoObject`](crate::dto::UpdateDtoObject) can be used.
-    pub async fn delete<T: Item>(&self, id: T::Id) -> Result<()> {
+    /// Can be used for all [`ItemId`]s
+    pub async fn delete<T: ItemId>(&self, id: T) -> Result<()> {
         let url = format!("/api/{}/{}/", T::endpoint(), id);
         self.request_no_body(Method::DELETE, &url, None).await?;
         Ok(())

@@ -9,7 +9,7 @@ use super::permission::ItemPermissions;
 
 /// A correspondent.
 #[derive(Debug, Clone, Deserialize, Serialize, CreateDto, UpdateDto, Item)]
-#[api_info(endpoint = "correspondents")]
+
 pub struct Correspondent {
     /// Unique identifier of the correspondent.
     #[dto(skip)]

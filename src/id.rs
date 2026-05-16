@@ -13,13 +13,32 @@ pub trait PaperlessId:
 {
 }
 
+/// Trait for all Paperless IDs which can be treated as items.
+pub trait ItemId: PaperlessId {
+    #[must_use]
+    fn endpoint() -> &'static str;
+}
+
 /// Macro for defining ID wrapper types.
 macro_rules! define_ids {
     ($($def:tt),* $(,)?) => {
-        $(define_ids!(@single $def);)*
+        $(define_ids!(@parse $def);)*
     };
 
-    (@single ($name:ident, $type:ty)) => {
+    (@parse ($name:ident, $type:ty)) => {
+        define_ids!(@emit copy $name, $type);
+    };
+    (@parse ($name:ident, $type:ty, noncopy)) => {
+        define_ids!(@emit noncopy $name, $type);
+    };
+    (@parse ($name:ident, $type:ty, $endpoint:literal)) => {
+        define_ids!(@emit copy $name, $type, $endpoint);
+    };
+    (@parse ($name:ident, $type:ty, noncopy, $endpoint:literal)) => {
+        define_ids!(@emit noncopy $name, $type, $endpoint);
+    };
+
+    (@emit copy $name:ident, $type:ty $(, $endpoint:literal)?) => {
         #[derive(Clone, Copy, Display, Default, PartialEq, Eq, Hash, Deserialize, Serialize)]
         #[repr(transparent)]
         /// ID type for a Paperless entity.
@@ -39,8 +58,9 @@ macro_rules! define_ids {
         }
 
         impl PaperlessId for $name {}
+        define_ids!(@maybe_item_id $name $(, $endpoint)?);
     };
-    (@single ($name:ident, $type:ty, noncopy)) => {
+    (@emit noncopy $name:ident, $type:ty $(, $endpoint:literal)?) => {
         #[derive(Clone, Display, Default, PartialEq, Eq, Hash, Deserialize, Serialize)]
         #[repr(transparent)]
         /// ID type for a Paperless entity (non-copy).
@@ -52,8 +72,7 @@ macro_rules! define_ids {
             }
         }
 
-        impl AsRef<str> for $name
-        {
+        impl AsRef<str> for $name {
             #[inline]
             fn as_ref(&self) -> &str {
                 self.0.as_ref()
@@ -61,25 +80,35 @@ macro_rules! define_ids {
         }
 
         impl PaperlessId for $name {}
+        define_ids!(@maybe_item_id $name $(, $endpoint)?);
+    };
+    (@maybe_item_id $name:ident) => {};
+    (@maybe_item_id $name:ident, $endpoint:literal) => {
+        impl ItemId for $name {
+            #[inline]
+            fn endpoint() -> &'static str {
+                $endpoint
+            }
+        }
     };
 }
 
 define_ids!(
-    (CorrespondentId, u32),
-    (CustomFieldId, u32),
-    (DocumentId, u32),
-    (DocumentTypeId, u32),
-    (GroupId, u32),
+    (CorrespondentId, u32, "correspondents"),
+    (CustomFieldId, u32, "custom_fields"),
+    (DocumentId, u32, "documents"),
+    (DocumentTypeId, u32, "document_types"),
+    (GroupId, u32, "groups"),
     (NoteId, u32),
-    (SavedViewId, u32),
+    (SavedViewId, u32, "saved_views"),
     (SelectableOptionId, String, noncopy),
-    (ShareLinkId, u32),
-    (StoragePathId, u32),
-    (TagId, u32),
+    (ShareLinkId, u32, "share_links"),
+    (StoragePathId, u32, "storage_paths"),
+    (TagId, u32, "tags"),
     (TaskId, String, noncopy),
-    (UserId, u32),
+    (UserId, u32, "users"),
     (WorkflowActionId, u32),
-    (WorkflowId, u32),
+    (WorkflowId, u32, "workflows"),
     (WorkflowTriggerId, u32),
     (WebhookActionId, u32),
 );

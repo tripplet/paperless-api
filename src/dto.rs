@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::id::PaperlessId;
+use crate::id::{ItemId, PaperlessId};
 
 /// Marker trait for DTOs used to create new items.
 pub trait CreateDto: Serialize {
@@ -25,14 +25,17 @@ pub trait UpdateDto: Serialize {
 /// Trait for items that can be managed via the Paperless API.
 pub trait Item {
     /// The ID type for this item.
-    type Id: PaperlessId;
+    type Id: ItemId;
 
     /// The base type for the DTO.
     type BaseType: serde::de::DeserializeOwned;
 
     /// Returns the API endpoint for this item.
+    #[inline]
     #[must_use]
-    fn endpoint() -> &'static str;
+    fn endpoint() -> &'static str {
+        Self::Id::endpoint()
+    }
 
     /// Returns the ID of this item.
     #[must_use]

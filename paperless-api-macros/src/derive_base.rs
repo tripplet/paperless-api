@@ -17,9 +17,6 @@ pub(crate) struct BaseStruct {
     /// The fields of the DTO struct.
     pub(crate) fields: Vec<syn::Field>,
 
-    /// The endpoint URL for the Item.
-    pub endpoint: String,
-
     pub id_type: Ident,
 }
 
@@ -46,8 +43,7 @@ impl TryFrom<DeriveInput> for BaseStruct {
     type Error = syn::Error;
 
     fn try_from(input: DeriveInput) -> syn::Result<Self> {
-        // Parse #[api_info(endpoint = "...")] attribute
-        let mut endpoint = None;
+        // Parse #[api_info(...)] attribute
         let mut visiblity = input.vis;
         let mut id_type = format_ident!("{}Id", input.ident);
 
@@ -56,10 +52,6 @@ impl TryFrom<DeriveInput> for BaseStruct {
                 attr.parse_nested_meta(|meta| {
                     if meta.path.is_ident("private") {
                         visiblity = parse_quote! { pub(crate) };
-                    } else if meta.path.is_ident("endpoint") {
-                        let value = meta.value()?;
-                        let lit: syn::LitStr = value.parse()?;
-                        endpoint = Some(lit.value());
                     } else if meta.path.is_ident("id") {
                         let value = meta.value()?;
                         id_type = value.parse()?;
@@ -89,18 +81,10 @@ impl TryFrom<DeriveInput> for BaseStruct {
             }
         };
 
-        let Some(endpoint) = endpoint else {
-            return Err(syn::Error::new_spanned(
-                &input.ident,
-                "Derive requires #[api_info(endpoint = \"...\")] attribute",
-            ));
-        };
-
         Ok(Self {
             name: input.ident,
             visiblity,
             id_type,
-            endpoint,
             fields: fields.iter().cloned().collect(),
         })
     }

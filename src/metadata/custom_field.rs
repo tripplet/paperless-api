@@ -8,7 +8,7 @@ use crate::id::{CustomFieldId, SelectableOptionId};
 
 /// Custom field definition.
 #[derive(Debug, Clone, Deserialize, Serialize, CreateDto, UpdateDto, Item)]
-#[api_info(endpoint = "custom_fields")]
+
 pub struct CustomField {
     /// Unique identifier of the custom field.
     #[dto(skip)]

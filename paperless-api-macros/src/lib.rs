@@ -79,10 +79,9 @@ pub fn derive_item_trait(input: TokenStream) -> TokenStream {
         Err(e) => return e.to_compile_error().into(),
     };
 
-    let id_type_name = format_ident!("{}Id", input_struct.name);
+    let id_type_name = input_struct.id_type;
     let id_type_name = quote!(crate::id::#id_type_name);
 
-    let endpoint = input_struct.endpoint.clone();
     let name = input_struct.name;
 
     // Generate the final output with the trait implementation
@@ -91,11 +90,6 @@ pub fn derive_item_trait(input: TokenStream) -> TokenStream {
         impl crate::dto::Item for #name {
             type Id = #id_type_name;
             type BaseType = #name;
-
-            #[inline]
-            fn endpoint() -> &'static str {
-                #endpoint
-            }
 
             #[inline]
             fn id(&self) -> Self::Id {

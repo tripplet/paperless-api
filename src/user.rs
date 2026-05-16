@@ -5,7 +5,7 @@ use serde::Deserialize;
 
 /// A paperless user.
 #[derive(Debug, Clone, Deserialize, CreateDto, UpdateDto, Item)]
-#[api_info(endpoint = "users")]
+
 pub struct User {
     /// Unique identifier of the user.
     #[dto(skip)]

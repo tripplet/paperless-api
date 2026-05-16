@@ -5,7 +5,7 @@ use serde::Deserialize;
 
 /// A paperless group.
 #[derive(Debug, Clone, Deserialize, CreateDto, UpdateDto, Item)]
-#[api_info(endpoint = "groups")]
+
 pub struct Group {
     /// Unique identifier of the group.
     #[dto(skip)]

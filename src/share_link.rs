@@ -23,7 +23,7 @@ pub enum ShareLinkFileVersion {
 
 /// A share link.
 #[derive(Debug, Clone, Deserialize, CreateDto, Item)]
-#[api_info(private, endpoint = "share_links")]
+#[api_info(private)]
 pub struct ShareLink {
     /// Unique identifier of the share link.
     #[dto(skip)]

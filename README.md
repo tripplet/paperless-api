@@ -76,7 +76,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
 You can create, update and delete metadata items such as tags, correspondents,
 document types, etc.
-See [`CreateDtoObject`](dto::CreateDtoObject) and [`UpdateDtoObject`](dto::UpdateDtoObject)
+See [`CreateDto`](dto::CreateDto) and [`UpdateDto`](dto::UpdateDto)
 
 ```rust,no_run
 use paperless_api::metadata::{MatchAlgorithm, tag::*};

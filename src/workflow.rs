@@ -9,7 +9,7 @@ use paperless_api_macros::{Item, UpdateDto};
 
 /// A workflow.
 #[derive(Debug, Clone, Deserialize, Item, UpdateDto)]
-#[api_info(endpoint = "workflows")]
+
 pub struct Workflow {
     /// Unique identifier of the workflow.
     #[dto(skip)]
