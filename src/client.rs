@@ -173,8 +173,8 @@ impl PaperlessClient {
         self
     }
 
-    /// Loads all items of the given type from the API.
-    async fn load_items<T: Item + DeserializeOwned>(&self) -> Result<HashMap<T::Id, T>> {
+    /// Loads all items of the given item type from the API.
+    pub async fn load_items<T: Item + DeserializeOwned>(&self) -> Result<HashMap<T::Id, T>> {
         debug!("Loading {}", T::endpoint());
         let endpoint = format!("/api/{}/", T::endpoint());
 

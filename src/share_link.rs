@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 
-use paperless_api_macros::CreateDto;
+use paperless_api_macros::{CreateDto, Item};
 
 /// The version of the file provided by a share link.
 #[derive(Debug, Display, Default, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
@@ -22,7 +22,7 @@ pub enum ShareLinkFileVersion {
 }
 
 /// A share link.
-#[derive(Debug, Clone, Deserialize, CreateDto)]
+#[derive(Debug, Clone, Deserialize, CreateDto, Item)]
 #[api_info(private, endpoint = "share_links")]
 pub struct ShareLink {
     /// Unique identifier of the share link.
