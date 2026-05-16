@@ -8,7 +8,7 @@ use reqwest::{
     header::{ACCEPT, HeaderMap, HeaderName, InvalidHeaderValue},
     multipart,
 };
-use serde::{Deserialize, de::DeserializeOwned};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use tracing::{debug, trace};
 
 use crate::{
@@ -330,10 +330,9 @@ impl PaperlessClient {
     }
 
     pub(crate) async fn get_document_data_by_id(&self, id: DocumentId) -> Result<DocumentData> {
-        self.request_json(
+        self.request_json_no_body(
             Method::GET,
             &format!("/api/documents/{}/", id.0),
-            None,
             self.default_query_params().as_deref(),
         )
         .await
@@ -349,11 +348,21 @@ impl PaperlessClient {
     }
 
     /// Make a request and parse the response as JSON.
+    pub(crate) fn request_json_no_body<T: serde::de::DeserializeOwned>(
+        &self,
+        method: Method,
+        endpoint: &str,
+        query_params: Option<&[(&str, &str)]>,
+    ) -> impl Future<Output = Result<T>> {
+        self.request_json(method, endpoint, None::<&()>, query_params)
+    }
+
+    /// Make a request and parse the response as JSON.
     pub(crate) async fn request_json<T: serde::de::DeserializeOwned>(
         &self,
         method: Method,
         endpoint: &str,
-        body: Option<&serde_json::Value>,
+        body: Option<&impl Serialize>,
         query_params: Option<&[(&str, &str)]>,
     ) -> Result<T> {
         let resp = self.request(method, endpoint, body, query_params).await?;
@@ -374,11 +383,21 @@ impl PaperlessClient {
     }
 
     /// Make a request and return the raw [`reqwest::Response`].
+    pub(crate) fn request_no_body(
+        &self,
+        method: Method,
+        endpoint: &str,
+        query_params: Option<&[(&str, &str)]>,
+    ) -> impl Future<Output = Result<reqwest::Response>> {
+        self.request(method, endpoint, None::<&()>, query_params)
+    }
+
+    /// Make a request and return the raw [`reqwest::Response`].
     pub(crate) async fn request(
         &self,
         method: Method,
         endpoint: &str,
-        body: Option<&serde_json::Value>,
+        body: Option<&impl Serialize>,
         query_params: Option<&[(&str, &str)]>,
     ) -> Result<reqwest::Response> {
         let mut req = self
@@ -451,7 +470,7 @@ impl PaperlessClient {
             debug!("Fetching page: {url}");
 
             let page: PaginatedResponse<T> = self
-                .request_json(Method::GET, &url, None, all_query_params.as_deref())
+                .request_json_no_body(Method::GET, &url, all_query_params.as_deref())
                 .await?;
 
             results.extend(page.results);
@@ -492,14 +511,13 @@ impl PaperlessClient {
         }
 
         let resp = self
-            .request(
+            .request_no_body(
                 Method::GET,
                 &format!(
                     "/api/tasks/?{}",
                     serde_urlencoded::to_string(&query)
                         .map_err(|e| Error::Other(format!("Failed to serialize query: {e}")))?
                 ),
-                None::<&serde_json::Value>,
                 None,
             )
             .await?;
@@ -539,12 +557,12 @@ impl PaperlessClient {
 
     /// Get server statistics.
     pub fn get_statistics(&self) -> impl Future<Output = Result<util::Statistics>> {
-        self.request_json(Method::GET, "/api/statistics/", None, None)
+        self.request_json_no_body(Method::GET, "/api/statistics/", None)
     }
 
     /// Get server status.
     pub fn get_status(&self) -> impl Future<Output = Result<util::ServerStatus>> {
-        self.request_json(Method::GET, "/api/status/", None, None)
+        self.request_json_no_body(Method::GET, "/api/status/", None)
     }
 
     /// Create a new item on the server.
@@ -554,13 +572,8 @@ impl PaperlessClient {
     /// Returns the created item.
     pub async fn create<T: CreateDto>(&self, new_item: &T) -> Result<T::BaseType> {
         let url = format!("/api/{}/", T::endpoint());
-        self.request_json(
-            Method::POST,
-            &url,
-            Some(&serde_json::to_value(new_item).map_err(|e| Error::Other(e.to_string()))?),
-            None,
-        )
-        .await
+        self.request_json(Method::POST, &url, Some(&new_item), None)
+            .await
     }
 
     /// Updates an existing.
@@ -570,13 +583,8 @@ impl PaperlessClient {
     /// Returns the updated item
     pub async fn update<T: UpdateDto>(&self, id: T::Id, update: &T) -> Result<T::BaseType> {
         let url = format!("/api/{}/{}/", T::endpoint(), id);
-        self.request_json::<T::BaseType>(
-            Method::PATCH,
-            &url,
-            Some(&serde_json::to_value(update).map_err(|e| Error::Other(e.to_string()))?),
-            None,
-        )
-        .await
+        self.request_json::<T::BaseType>(Method::PATCH, &url, Some(&update), None)
+            .await
     }
 
     /// Deletes an existing item.
@@ -584,7 +592,7 @@ impl PaperlessClient {
     /// All structs which implement [`UpdateDtoObject`](crate::dto::UpdateDtoObject) can be used.
     pub async fn delete<T: Item>(&self, id: T::Id) -> Result<()> {
         let url = format!("/api/{}/{}/", T::endpoint(), id);
-        self.request(Method::DELETE, &url, None, None).await?;
+        self.request_no_body(Method::DELETE, &url, None).await?;
         Ok(())
     }
 
@@ -593,7 +601,7 @@ impl PaperlessClient {
     /// All structs which implement [`Item`] can be used.
     pub async fn load_by_id<T: Item>(&self, id: T::Id) -> Result<Option<T::BaseType>> {
         let url = format!("/api/{}/{}/", T::endpoint(), id);
-        match self.request_json(Method::GET, &url, None, None).await {
+        match self.request_json_no_body(Method::GET, &url, None).await {
             found_item @ Ok(_) => found_item,
             Err(Error::NotFound) => Ok(None),
             err @ Err(_) => err,

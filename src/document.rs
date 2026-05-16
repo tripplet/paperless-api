@@ -413,10 +413,9 @@ impl Document {
     pub async fn thumbnail(&self) -> Result<Vec<u8>> {
         let resp = self
             .client
-            .request(
+            .request_no_body(
                 Method::GET,
                 &format!("/api/documents/{}/thumb/", self.data.id),
-                None,
                 None,
             )
             .await?;
@@ -494,7 +493,7 @@ impl Document {
             .request(
                 Method::PATCH,
                 &format!("/api/documents/{}/", self.data.id),
-                Some(&serde_json::to_value(&patch).map_err(|e| Error::Other(e.to_string()))?),
+                Some(&patch),
                 None,
             )
             .await?;
@@ -506,10 +505,9 @@ impl Document {
     /// Delete the document
     pub async fn delete(&mut self) -> Result<()> {
         self.client
-            .request(
+            .request_no_body(
                 Method::DELETE,
                 &format!("/api/documents/{}/", self.data.id),
-                None,
                 None,
             )
             .await?;
@@ -538,10 +536,9 @@ impl Document {
 
         let resp = self
             .client
-            .request(
+            .request_no_body(
                 Method::GET,
                 &format!("/api/documents/{}/download/", self.data.id),
-                None,
                 None,
             )
             .await?;
@@ -566,10 +563,9 @@ impl Document {
 
         let resp = self
             .client
-            .request(
+            .request_no_body(
                 Method::GET,
                 &format!("/api/documents/{}/download/", self.data.id),
-                None,
                 None,
             )
             .await?;
