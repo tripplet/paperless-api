@@ -570,8 +570,12 @@ impl PaperlessClient {
     /// All structs which implement [`CreateDtoObject`](crate::dto::CreateDtoObject) can be used as `new_item`.
     ///
     /// Returns the created item.
-    pub async fn create<T: CreateDto + Item>(&self, new_item: &T) -> Result<<T as Item>::BaseType> {
-        let url = format!("/api/{}/", <T as Item>::endpoint());
+    pub async fn create<T>(&self, new_item: &T) -> Result<T::BaseType>
+    where
+        T: CreateDto,
+        T::BaseType: Item,
+    {
+        let url = format!("/api/{}/", <T::BaseType as Item>::endpoint());
         self.request_json(Method::POST, &url, Some(&new_item), None)
             .await
     }
@@ -581,13 +585,13 @@ impl PaperlessClient {
     /// All structs which implement [`UpdateDtoObject`](crate::dto::UpdateDtoObject) can be used as `item`.
     ///
     /// Returns the updated item
-    pub async fn update<T: UpdateDto + Item>(
-        &self,
-        id: <T as Item>::Id,
-        update: &T,
-    ) -> Result<<T as Item>::BaseType> {
-        let url = format!("/api/{}/{}/", <T as Item>::endpoint(), id);
-        self.request_json::<<T as Item>::BaseType>(Method::PATCH, &url, Some(&update), None)
+    pub async fn update<T>(&self, id: T::Id, update: &T) -> Result<T::BaseType>
+    where
+        T: UpdateDto,
+        T::BaseType: Item,
+    {
+        let url = format!("/api/{}/{}/", <T::BaseType as Item>::endpoint(), id,);
+        self.request_json::<T::BaseType>(Method::PATCH, &url, Some(&update), None)
             .await
     }
 
