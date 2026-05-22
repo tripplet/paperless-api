@@ -9,7 +9,6 @@ use super::permission::ItemPermissions;
 
 /// A document type.
 #[derive(Debug, Clone, Deserialize, Serialize, CreateDto, UpdateDto, Item)]
-
 pub struct DocumentType {
     /// Unique identifier of the document type.
     #[dto(skip)]

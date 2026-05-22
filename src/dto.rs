@@ -23,12 +23,9 @@ pub trait UpdateDto: Serialize {
 }
 
 /// Trait for items that can be managed via the Paperless API.
-pub trait Item {
+pub trait Item: serde::de::DeserializeOwned {
     /// The ID type for this item.
     type Id: ItemId;
-
-    /// The base type for the DTO.
-    type BaseType: serde::de::DeserializeOwned;
 
     /// Returns the API endpoint for this item.
     #[inline]

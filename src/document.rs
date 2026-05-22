@@ -612,25 +612,13 @@ impl Document {
     ) -> Result<ShareLink> {
         self.fail_if_deleted()?;
 
-        let mut share_link = self
-            .client
-            .request_json::<ShareLink>(
-                Method::POST,
-                "/api/share_links/",
-                Some(
-                    &serde_json::to_value(&CreateShareLink {
-                        document: self.id(),
-                        expiration: expires,
-                        file_version: version,
-                    })
-                    .map_err(|e| Error::Other(e.to_string()))?,
-                ),
-                None,
-            )
-            .await?;
-
-        share_link.base_url = self.client.base_url.clone();
-        Ok(share_link)
+        self.client
+            .create(&CreateShareLink {
+                document: self.id(),
+                expiration: expires,
+                file_version: version,
+            })
+            .await
     }
 }
 

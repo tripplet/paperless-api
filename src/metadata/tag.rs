@@ -9,7 +9,6 @@ use crate::id::TagId;
 
 /// A document tag.
 #[derive(Debug, Clone, Deserialize, Serialize, CreateDto, UpdateDto, Item)]
-
 pub struct Tag {
     /// Unique identifier of the tag.
     #[dto(skip)]

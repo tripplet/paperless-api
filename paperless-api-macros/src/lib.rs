@@ -89,7 +89,6 @@ pub fn derive_item_trait(input: TokenStream) -> TokenStream {
         #[automatically_derived]
         impl crate::dto::Item for #name {
             type Id = #id_type_name;
-            type BaseType = #name;
 
             #[inline]
             fn id(&self) -> Self::Id {

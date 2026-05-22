@@ -105,7 +105,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     }).await?;
 
     // Delete a tag
-    client.delete::<Tag>(created.id).await?;
+    client.delete(created.id).await?;
 
     Ok(())
 }

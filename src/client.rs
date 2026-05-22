@@ -580,7 +580,7 @@ impl PaperlessClient {
             .await
     }
 
-    /// Updates an existing.
+    /// Updates an existing item.
     ///
     /// All structs which implement [`UpdateDto`] can be used as `item`.
     ///
@@ -607,7 +607,7 @@ impl PaperlessClient {
     /// Load an existing item directly from the server, bypassing the caches.
     ///
     /// All structs which implement [`Item`] can be used.
-    pub async fn load_by_id<T: Item>(&self, id: T::Id) -> Result<Option<T::BaseType>> {
+    pub async fn load_by_id<T: Item>(&self, id: T::Id) -> Result<Option<T>> {
         let url = format!("/api/{}/{}/", T::endpoint(), id);
         match self.request_json_no_body(Method::GET, &url, None).await {
             found_item @ Ok(_) => found_item,

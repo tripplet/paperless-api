@@ -9,7 +9,6 @@ use super::permission::ItemPermissions;
 
 /// A storage path.
 #[derive(Debug, Clone, Deserialize, Serialize, CreateDto, UpdateDto, Item)]
-
 pub struct StoragePath {
     /// Unique identifier of the storage path.
     #[dto(skip)]
