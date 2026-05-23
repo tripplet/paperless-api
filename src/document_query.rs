@@ -91,6 +91,7 @@ impl DocumentQueryBuilder {
                 archive_serial_number.0.to_string(),
             ));
         }
+
         if let Some(correspondent_id_in) = self.correspondent_id_in {
             query.push((
                 QUERY_PARAM_CORRESPONDENT_ID_IN,
@@ -101,15 +102,18 @@ impl DocumentQueryBuilder {
                     .join(","),
             ));
         }
+
         if let Some(correspondent_name_icontains) = self.correspondent_name_icontains {
             query.push((
                 QUERY_PARAM_CORRESPONDENT_NAME_ICONTAINS,
                 correspondent_name_icontains,
             ));
         }
+
         if let Some(content_icontains) = self.content_icontains {
             query.push((QUERY_PARAM_CONTENT_ICONTAINS, content_icontains));
         }
+
         if let Some(tags_id_in) = self.tags_id_in {
             query.push((
                 QUERY_PARAM_TAGS_ID_IN,
@@ -120,6 +124,7 @@ impl DocumentQueryBuilder {
                     .join(","),
             ));
         }
+
         if !self.full_content {
             query.push((QUERY_PARAM_TRUNCATE_CONTENT, "true".to_string()));
         }

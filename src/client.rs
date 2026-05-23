@@ -1,6 +1,6 @@
 //! The central client for interacting with Paperless.
 
-use std::{collections::HashMap, path::Path, str::FromStr, sync::Arc};
+use std::{borrow::Cow, collections::HashMap, path::Path, str::FromStr, sync::Arc};
 
 use enum_iterator::Sequence;
 use reqwest::{
@@ -182,14 +182,20 @@ impl PaperlessClient {
         Ok(items.into_iter().map(|item| (item.id(), item)).collect())
     }
 
-    fn default_query_params(&self) -> Option<Vec<(&'static str, &'static str)>> {
-        let mut params = Vec::with_capacity(2);
+    fn default_query_params(&self) -> Option<HashMap<&'static str, Cow<'_, str>>> {
+        let mut params = HashMap::new();
 
         if self.request_full_permissions {
-            params.push((crate::document_query::QUERY_PARAM_FULL_PERMISSIONS, "true"));
+            params.insert(
+                crate::document_query::QUERY_PARAM_FULL_PERMISSIONS,
+                Cow::Borrowed("true"),
+            );
         }
         if !self.request_full_content {
-            params.push((crate::document_query::QUERY_PARAM_TRUNCATE_CONTENT, "true"));
+            params.insert(
+                crate::document_query::QUERY_PARAM_TRUNCATE_CONTENT,
+                Cow::Borrowed("true"),
+            );
         }
 
         if params.is_empty() {
@@ -299,15 +305,14 @@ impl PaperlessClient {
     pub async fn query_documents(&self, query: DocumentQueryBuilder) -> Result<Vec<Document>> {
         let full_content = query.full_content;
         let query_params = query.build();
-        let query_vec: Vec<_> = query_params
+        let query: HashMap<&str, Cow<str>> = query_params
             .query
-            .iter()
-            .map(|(k, v)| (*k, v.as_str()))
+            .into_iter()
+            .map(|(k, v)| (k, Cow::Owned(v)))
             .collect();
-        let query_slice = query_vec.as_slice();
 
         let documents: Vec<_> = self
-            .fetch_all_pages::<DocumentData>("/api/documents/", Some(query_slice))
+            .fetch_all_pages::<DocumentData>("/api/documents/", Some(&query))
             .await?
             .into_iter()
             .map(|data| Document::new(data, Arc::new(self.clone()), !full_content))
@@ -329,21 +334,55 @@ impl PaperlessClient {
         self.query_documents(query)
     }
 
-    pub(crate) async fn get_document_data_by_id(&self, id: DocumentId) -> Result<DocumentData> {
+    pub(crate) async fn get_document_data_by_id(
+        &self,
+        id: DocumentId,
+        full_content: Option<bool>,
+        full_permissions: Option<bool>,
+    ) -> Result<DocumentData> {
+        let mut params = self.default_query_params();
+
+        if full_content.is_some() || full_permissions.is_some() {
+            let mut updated_params = params.unwrap_or_default();
+
+            if let Some(full_content) = full_content {
+                updated_params.insert(
+                    crate::document_query::QUERY_PARAM_TRUNCATE_CONTENT,
+                    Cow::Owned((!full_content).to_string()),
+                );
+            }
+
+            if let Some(full_permissions) = full_permissions {
+                updated_params.insert(
+                    crate::document_query::QUERY_PARAM_FULL_PERMISSIONS,
+                    Cow::Owned(full_permissions.to_string()),
+                );
+            }
+
+            params = Some(updated_params);
+        }
+
         self.request_json_no_body(
             Method::GET,
             &format!("/api/documents/{}/", id.0),
-            self.default_query_params().as_deref(),
+            params.as_ref(),
         )
         .await
     }
 
     /// Get a document by its ID.
-    pub async fn get_document_by_id(&self, id: DocumentId) -> Result<Document> {
+    pub async fn get_document_by_id(
+        &self,
+        id: DocumentId,
+        full_content: Option<bool>,
+        full_permissions: Option<bool>,
+    ) -> Result<Document> {
+        let content_is_truncated = !full_content.unwrap_or(self.request_full_content);
         Ok(Document::new(
-            self.get_document_data_by_id(id).await?,
+            self.get_document_data_by_id(id, full_content, full_permissions)
+                .await?,
             Arc::new(self.clone()),
-            false,
+            content_is_truncated,
         ))
     }
 
@@ -352,7 +391,7 @@ impl PaperlessClient {
         &self,
         method: Method,
         endpoint: &str,
-        query_params: Option<&[(&str, &str)]>,
+        query_params: Option<&HashMap<&str, Cow<str>>>,
     ) -> impl Future<Output = Result<T>> {
         self.request_json(method, endpoint, None::<&()>, query_params)
     }
@@ -363,7 +402,7 @@ impl PaperlessClient {
         method: Method,
         endpoint: &str,
         body: Option<&impl Serialize>,
-        query_params: Option<&[(&str, &str)]>,
+        query_params: Option<&HashMap<&str, Cow<'_, str>>>,
     ) -> Result<T> {
         let resp = self.request(method, endpoint, body, query_params).await?;
 
@@ -387,7 +426,7 @@ impl PaperlessClient {
         &self,
         method: Method,
         endpoint: &str,
-        query_params: Option<&[(&str, &str)]>,
+        query_params: Option<&HashMap<&str, Cow<'_, str>>>,
     ) -> impl Future<Output = Result<reqwest::Response>> {
         self.request(method, endpoint, None::<&()>, query_params)
     }
@@ -398,7 +437,7 @@ impl PaperlessClient {
         method: Method,
         endpoint: &str,
         body: Option<&impl Serialize>,
-        query_params: Option<&[(&str, &str)]>,
+        query_params: Option<&HashMap<&str, Cow<'_, str>>>,
     ) -> Result<reqwest::Response> {
         let mut req = self
             .client
@@ -457,11 +496,14 @@ impl PaperlessClient {
     pub(crate) async fn fetch_all_pages<T: for<'de> Deserialize<'de>>(
         &self,
         endpoint: &str,
-        query_params: Option<&[(&str, &str)]>,
+        query_params: Option<&HashMap<&str, Cow<'_, str>>>,
     ) -> Result<Vec<T>> {
         let mut results = vec![];
         let mut all_query_params = self.default_query_params().unwrap_or_default();
-        all_query_params.extend(query_params.unwrap_or_default());
+        if let Some(query_params) = query_params {
+            all_query_params.extend(query_params.clone());
+        }
+
         let mut all_query_params = Some(all_query_params);
 
         let mut current_url = Some(endpoint.to_string());
@@ -470,7 +512,7 @@ impl PaperlessClient {
             debug!("Fetching page: {url}");
 
             let page: PaginatedResponse<T> = self
-                .request_json_no_body(Method::GET, &url, all_query_params.as_deref())
+                .request_json_no_body(Method::GET, &url, all_query_params.as_ref())
                 .await?;
 
             results.extend(page.results);

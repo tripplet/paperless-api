@@ -397,13 +397,11 @@ impl Document {
         let document_data = self
             .client
             .as_ref()
-            .get_document_data_by_id(self.data.id)
+            .get_document_data_by_id(self.data.id, Some(!self.content_is_truncated), None)
             .await?;
 
         self.data = document_data;
-
         self.changed_values = BitFlags::empty();
-        self.content_is_truncated = false;
         Ok(())
     }
 
@@ -524,7 +522,10 @@ impl Document {
             return Ok(());
         }
 
-        let doc = self.client.get_document_data_by_id(self.data.id).await?;
+        let doc = self
+            .client
+            .get_document_data_by_id(self.data.id, Some(true), None)
+            .await?;
         self.data.content = doc.content;
         self.content_is_truncated = false;
         Ok(())
