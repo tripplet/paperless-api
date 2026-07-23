@@ -103,6 +103,7 @@ define_ids!(
     (SavedViewId, u32, "saved_views"),
     (SelectableOptionId, String, noncopy),
     (ShareLinkId, u32, "share_links"),
+    (ShareLinkBundleId, u32, "share_link_bundles"),
     (StoragePathId, u32, "storage_paths"),
     (TagId, u32, "tags"),
     (TaskId, String, noncopy),
