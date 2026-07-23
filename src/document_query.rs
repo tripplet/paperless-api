@@ -12,6 +12,7 @@ pub struct DocumentQueryBuilder {
     correspondent_id_in: Option<Vec<CorrespondentId>>,
     correspondent_name_icontains: Option<String>,
     content_icontains: Option<String>,
+    title_icontains: Option<String>,
     tags_id_in: Option<Vec<TagId>>,
     pub(crate) full_content: bool,
     full_permissions: bool,
@@ -29,6 +30,7 @@ const QUERY_PARAM_ARCHIVE_SERIAL_NUMBER: &str = "archive_serial_number";
 const QUERY_PARAM_CORRESPONDENT_ID_IN: &str = "correspondent__id__in";
 const QUERY_PARAM_CORRESPONDENT_NAME_ICONTAINS: &str = "correspondent__name__icontains";
 const QUERY_PARAM_CONTENT_ICONTAINS: &str = "content__icontains";
+const QUERY_PARAM_TITLE_ICONTAINS: &str = "title__icontains";
 
 impl DocumentQueryBuilder {
     /// Filters documents which have the given archive serial number.
@@ -56,6 +58,13 @@ impl DocumentQueryBuilder {
     #[must_use]
     pub fn content_icontains(mut self, content_icontains: String) -> Self {
         self.content_icontains = Some(content_icontains);
+        self
+    }
+
+    /// Filters documents which have a title containing the given string.
+    #[must_use]
+    pub fn title_icontains(mut self, title_icontains: String) -> Self {
+        self.title_icontains = Some(title_icontains);
         self
     }
 
@@ -112,6 +121,10 @@ impl DocumentQueryBuilder {
 
         if let Some(content_icontains) = self.content_icontains {
             query.push((QUERY_PARAM_CONTENT_ICONTAINS, content_icontains));
+        }
+
+        if let Some(title_icontains) = self.title_icontains {
+            query.push((QUERY_PARAM_TITLE_ICONTAINS, title_icontains));
         }
 
         if let Some(tags_id_in) = self.tags_id_in {

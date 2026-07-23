@@ -60,6 +60,31 @@ pub struct PaperlessClient {
     cached_data: Arc<CachedData>,
 }
 
+/// Search hit data
+#[derive(Debug, Clone, Deserialize)]
+pub struct SearchHit {
+    /// The score of the search hit.
+    pub score: f32,
+
+    /// Highlight of the search hit in the document content.
+    pub highlights: Option<String>,
+
+    /// Highlight of the search hit in the note content.
+    pub note_highlights: Option<String>,
+
+    /// Rank of the search hit.
+    pub rank: u32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct SearchResult {
+    #[serde(flatten)]
+    document_data: DocumentData,
+
+    #[serde(rename = "__search_hit__")]
+    search_hit: SearchHit,
+}
+
 #[derive(Debug, Clone)]
 struct CachedData {
     correspondents: HashMap<CorrespondentId, Correspondent>,
@@ -730,6 +755,29 @@ impl PaperlessClient {
             .document_types
             .values()
             .find(|dt| dt.name == name)
+    }
+
+    /// Search for documents.
+    pub async fn search(&self, search: &str) -> Result<Vec<(Document, SearchHit)>> {
+        let results = self
+            .fetch_all_pages::<SearchResult>(
+                "/api/documents/",
+                Some(&HashMap::from([("query", search.into())])),
+            )
+            .await?
+            .into_iter()
+            .map(|result| {
+                (
+                    Document::new(
+                        result.document_data,
+                        Arc::new(self.clone()),
+                        !self.request_full_content,
+                    ),
+                    result.search_hit,
+                )
+            })
+            .collect();
+        Ok(results)
     }
 
     /// Get the correspondents cache.
