@@ -1,5 +1,7 @@
 //! Types related to tasks.
 
+use std::time::Duration;
+
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 
@@ -12,58 +14,109 @@ pub struct Task {
     /// The Celery-ID of the task.
     pub task_id: crate::id::TaskId,
 
-    /// The name/kind of the task.
-    #[serde(rename = "task_name")]
-    pub name: TaskName,
-
     /// The type of the task.
-    #[serde(rename = "type")]
     pub task_type: TaskType,
+
+    /// The source of the task.
+    pub trigger_source: TaskTriggerSource,
 
     /// The status of the task.
     pub status: TaskStatus,
 
-    /// The user who owns the task.
-    pub owner: crate::id::UserId,
+    /// The result of the task, if any.
+    pub result: Option<String>,
+
+    /// When the task was created.
+    pub date_created: chrono::DateTime<chrono::Utc>,
+
+    /// When the task was started.
+    pub date_started: Option<chrono::DateTime<chrono::Utc>>,
+
+    /// When the task was completed.
+    pub date_done: Option<chrono::DateTime<chrono::Utc>>,
+
+    /// The duration the task took to complete.
+    #[serde(
+        rename = "duration_seconds",
+        deserialize_with = "deserialize_duration_seconds"
+    )]
+    pub duration: Option<Duration>,
+
+    /// The time the task was queued.
+    #[serde(
+        rename = "wait_time_seconds",
+        deserialize_with = "deserialize_duration_seconds"
+    )]
+    pub wait_time: Option<Duration>,
+
+    /// The input data for the task.
+    pub input_data: Option<serde_json::Value>,
+
+    /// The result data for the task.
+    pub result_data: Option<serde_json::Value>,
+
+    /// The ID of the related documents.
+    #[serde(rename = "related_document_ids")]
+    pub related_documents: Option<Vec<crate::id::DocumentId>>,
 
     /// Whether the task has been acknowledged.
     pub acknowledged: bool,
 
-    /// The result of the task, if any.
-    pub result: Option<String>,
-
-    /// The ID of the related document, if any.
-    pub related_document: Option<String>,
+    /// The user who owns the task.
+    pub owner: crate::id::UserId,
 }
 
 /// The status of a task.
 #[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
-#[serde(rename_all = "UPPERCASE")]
+#[serde(rename_all = "snake_case")]
 pub enum TaskStatus {
-    Failure,
     Pending,
-    Received,
-    Retry,
-    Revoked,
     Started,
     Success,
+    Failure,
+    Revoked,
 }
 
 /// The name of a task.
 #[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum TaskName {
-    ConsumeFile,
-    TrainClassifier,
-    CheckSanity,
-    IndexOptimize,
-}
+pub enum TaskName {}
 
 /// The type of a task.
 #[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TaskType {
-    AutoTask,
-    ScheduledTask,
-    ManualTask,
+    ConsumeFile,
+    TrainClassifier,
+    SanityCheck,
+    IndexOptimize,
+    MailFetch,
+    LlmIndex,
+    EmptyTrash,
+    CheckWorkflows,
+    BulkUpdate,
+    ReprocessDocument,
+    BuildShareLink,
+    BulkDelete,
+}
+
+/// The source of a task trigger.
+#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TaskTriggerSource {
+    Scheduled,
+    WebUi,
+    ApiUpload,
+    FolderConsume,
+    EmailConsume,
+    System,
+    Manual,
+}
+
+fn deserialize_duration_seconds<'de, D>(deserializer: D) -> Result<Option<Duration>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let seconds: Option<f64> = serde::Deserialize::deserialize(deserializer)?;
+    Ok(seconds.map(Duration::from_secs_f64))
 }

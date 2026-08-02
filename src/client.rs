@@ -563,53 +563,21 @@ impl PaperlessClient {
         task_name: Option<&str>,
         acknowledged: Option<bool>,
     ) -> Result<Vec<Task>> {
-        let mut query = Vec::new();
+        let mut query = HashMap::new();
 
         if let Some(id) = task_id {
-            query.push(("task_id", id.to_string()));
+            query.insert("task_id", Cow::Owned(id.to_string()));
         }
 
         if let Some(name) = task_name {
-            query.push(("task_name", name.to_string()));
+            query.insert("task_name", Cow::Owned(name.to_string()));
         }
 
         if let Some(ack) = acknowledged {
-            query.push(("acknowledged", ack.to_string()));
+            query.insert("acknowledged", Cow::Owned(ack.to_string()));
         }
 
-        let resp = self
-            .request_no_body(
-                Method::GET,
-                &format!(
-                    "/api/tasks/?{}",
-                    serde_urlencoded::to_string(&query)
-                        .map_err(|e| Error::Other(format!("Failed to serialize query: {e}")))?
-                ),
-                None,
-            )
-            .await?;
-
-        let body = resp
-            .text()
-            .await
-            .map_err(|e| Error::Other(format!("Failed to read response body: {e:?}")))?;
-
-        trace!("get_task_status response: {:?}", body);
-
-        let tasks: Vec<Task> = match serde_json::from_str(&body) {
-            Ok(t) => t,
-            Err(e) => {
-                return Err(Error::InvalidJson(format!(
-                    "Failed to parse response body: {e:?}"
-                )));
-            }
-        };
-
-        if tasks.is_empty() {
-            return Err(Error::NotFound);
-        }
-
-        Ok(tasks)
+        self.fetch_all_pages("/api/tasks/", Some(&query)).await
     }
 
     /// Get all workflows.
