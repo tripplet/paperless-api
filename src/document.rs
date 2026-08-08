@@ -614,6 +614,16 @@ impl Document {
         }
     }
 
+    /// Returns the link to the document page.
+    #[must_use]
+    pub fn page_link(&self) -> String {
+        format!(
+            "{base_url}/documents/{id}/",
+            base_url = self.client.base_url,
+            id = self.data.id
+        )
+    }
+
     /// Download the document to a file, requires the `tokio-fs` feature.
     ///
     /// # Errors
