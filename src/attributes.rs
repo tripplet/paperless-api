@@ -1,4 +1,4 @@
-//! Metadata associated with documents.
+//! Attributes associated with documents.
 
 use derive_more::Display;
 use serde_repr::{Deserialize_repr, Serialize_repr};
@@ -17,7 +17,7 @@ pub use permission::Permission;
 pub use storage_path::StoragePath;
 pub use tag::Tag;
 
-/// A matching algorithm for metadata items.
+/// A matching algorithm for attributes items.
 #[derive(Debug, Default, Clone, Copy, Display, Deserialize_repr, Serialize_repr)]
 #[repr(u8)]
 pub enum MatchAlgorithm {

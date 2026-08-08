@@ -1,12 +1,12 @@
 #![doc = include_str!("../README.md")]
 
+pub mod attributes;
 pub mod client;
 pub mod document;
 pub mod document_query;
 pub mod dto;
 pub mod group;
 pub mod id;
-pub mod metadata;
 pub mod note;
 pub mod saved_view;
 pub mod share_link;
@@ -16,7 +16,7 @@ pub mod user;
 pub mod util;
 pub mod workflow;
 
-pub use client::{PaperlessClient, RefreshMetaData};
+pub use client::{PaperlessClient, RefreshAttributes};
 pub use document::Document;
 pub use document_query::DocumentQuery;
 pub use group::Group;

@@ -4,7 +4,7 @@ use derive_more::Display;
 use paperless_api_macros::{CreateDto, Item, ReprSerde, UpdateDto};
 use serde::{Deserialize, Serialize};
 
-use crate::metadata::permission::ItemPermissions;
+use crate::attributes::permission::ItemPermissions;
 
 /// A saved view in the paperless UI.
 #[derive(Debug, Default, Clone, Deserialize, Serialize, CreateDto, UpdateDto, Item)]

@@ -18,8 +18,8 @@ correspondents, document types, and tasks.
 ## Features
 
 - Async API built on `reqwest`
-- Access documents and related metadata from Paperless
-- Local metadata caching
+- Access documents and related attributes from Paperless
+- Local attribute caching
 - Upload documents
 - Query task status
 
@@ -41,15 +41,15 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-## Refreshing cached metadata
+## Refreshing cached attributes
 
-The client keeps some metadata cached locally, such as tags, custom fields,
+The client keeps some attributes cached locally, such as tags, custom fields,
 correspondents, and document types.
 
 You can refresh the caches individually or all:
 
 ```rust,no_run
-use paperless_api::{PaperlessClient, RefreshMetaData};
+use paperless_api::{PaperlessClient, RefreshAttributes};
 
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut client = PaperlessClient::new(
@@ -60,9 +60,9 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     client
         .refresh([
-            RefreshMetaData::Tags,
-            RefreshMetaData::CustomFields,
-            RefreshMetaData::Correspondents,
+            RefreshAttributes::Tags,
+            RefreshAttributes::CustomFields,
+            RefreshAttributes::Correspondents,
         ])
         .await?;
 
@@ -72,14 +72,14 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-## Creating and updating metadata
+## Creating and updating attributes
 
-You can create, update and delete metadata items such as tags, correspondents,
+You can create, update and delete attributes items such as tags, correspondents,
 document types, etc.
 See [`CreateDto`](dto::CreateDto) and [`UpdateDto`](dto::UpdateDto)
 
 ```rust,no_run
-use paperless_api::metadata::{MatchAlgorithm, tag::*};
+use paperless_api::attributes::{MatchAlgorithm, tag::*};
 
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let client = paperless_api::PaperlessClient::new(

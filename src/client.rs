@@ -13,6 +13,10 @@ use tracing::{debug, trace};
 
 use crate::{
     Error, Group, Result, SavedView, User,
+    attributes::{
+        correspondent::Correspondent, custom_field::CustomField, document_type::DocumentType,
+        storage_path::StoragePath, tag::Tag,
+    },
     document::{Document, DocumentData},
     document_query::DocumentQueryBuilder,
     dto::{CreateDto, Item, UpdateDto},
@@ -20,22 +24,18 @@ use crate::{
         CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, GroupId, ItemId, StoragePathId,
         TagId, TaskId, UserId,
     },
-    metadata::{
-        correspondent::Correspondent, custom_field::CustomField, document_type::DocumentType,
-        storage_path::StoragePath, tag::Tag,
-    },
     task::Task,
     util,
     workflow::Workflow,
 };
 
-/// Selects which cached metadata to refresh.
+/// Selects which cached attributes to refresh.
 ///
 /// Cached data is data which is rarely updated;
 /// refreshing it is normally not necessary on every request.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Sequence)]
 #[non_exhaustive]
-pub enum RefreshMetaData {
+pub enum RefreshAttributes {
     Tags,
     CustomFields,
     Correspondents,
@@ -185,7 +185,7 @@ impl PaperlessClient {
     /// Sets whether to request full permissions data for items during refresh.
     ///
     /// If not enabled only simple permission data is loaded.
-    /// See [`ItemPermissions`](crate::metadata::permission::ItemPermissions) for more details.
+    /// See [`ItemPermissions`](crate::attributes::permission::ItemPermissions) for more details.
     #[must_use]
     pub fn with_full_permissions(mut self, req: bool) -> Self {
         self.request_full_permissions = req;
@@ -230,26 +230,30 @@ impl PaperlessClient {
         }
     }
 
-    /// Refresh and cache all metadata.
+    /// Refresh and cache all attributes.
     ///
     /// Only updates the cache for this instance, cloned instances will not see the changes.
     pub async fn refresh_all(&mut self) -> Result<()> {
-        self.refresh(enum_iterator::all::<RefreshMetaData>()).await
+        self.refresh(enum_iterator::all::<RefreshAttributes>())
+            .await
     }
 
-    /// Refresh and cache the selected metadata.
+    /// Refresh and cache the selected attributes.
     ///
     /// Only updates the cache for this instance, cloned instances will not see the changes.
     ///
     /// # Arguments
     ///
-    /// * `data` - The metadata to refresh.
+    /// * `data` - The attributes to refresh.
     /// * `full_permissions` - Whether to use request full permissions data for the items being refreshed.
-    pub async fn refresh(&mut self, data: impl IntoIterator<Item = RefreshMetaData>) -> Result<()> {
+    pub async fn refresh(
+        &mut self,
+        data: impl IntoIterator<Item = RefreshAttributes>,
+    ) -> Result<()> {
         #[rustfmt::skip]
         async fn inner(
             client: &mut PaperlessClient,
-            data: &mut dyn Iterator<Item = RefreshMetaData>,
+            data: &mut dyn Iterator<Item = RefreshAttributes>,
         ) -> Result<()> {
             let selected: std::collections::HashSet<_> = data.into_iter().collect();
 
@@ -260,49 +264,49 @@ impl PaperlessClient {
             let (tags, custom_fields, correspondents, document_types, groups, users, storage_paths) =
                 futures_util::try_join!(
                     async {
-                        if selected.contains(&RefreshMetaData::Tags) {
+                        if selected.contains(&RefreshAttributes::Tags) {
                             Ok(Some(client.load_items::<Tag>().await?))
                         } else {
                             Ok::<Option<_>, Error>(None)
                         }
                     },
                     async {
-                        if selected.contains(&RefreshMetaData::CustomFields) {
+                        if selected.contains(&RefreshAttributes::CustomFields) {
                             Ok(Some(client.load_items::<CustomField>().await?))
                         } else {
                             Ok(None)
                         }
                     },
                     async {
-                        if selected.contains(&RefreshMetaData::Correspondents) {
+                        if selected.contains(&RefreshAttributes::Correspondents) {
                             Ok(Some(client.load_items::<Correspondent>().await?))
                         } else {
                             Ok(None)
                         }
                     },
                     async {
-                        if selected.contains(&RefreshMetaData::DocumentTypes) {
+                        if selected.contains(&RefreshAttributes::DocumentTypes) {
                             Ok(Some(client.load_items::<DocumentType>().await?))
                         } else {
                             Ok(None)
                         }
                     },
                     async {
-                        if selected.contains(&RefreshMetaData::Groups) {
+                        if selected.contains(&RefreshAttributes::Groups) {
                             Ok(Some(client.load_items::<Group>().await?))
                         } else {
                             Ok(None)
                         }
                     },
                     async {
-                        if selected.contains(&RefreshMetaData::Users) {
+                        if selected.contains(&RefreshAttributes::Users) {
                             Ok(Some(client.load_items::<User>().await?))
                         } else {
                             Ok(None)
                         }
                     },
                     async {
-                        if selected.contains(&RefreshMetaData::StoragePaths) {
+                        if selected.contains(&RefreshAttributes::StoragePaths) {
                             Ok(Some(client.load_items::<StoragePath>().await?))
                         } else {
                             Ok(None)

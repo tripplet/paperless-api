@@ -22,11 +22,11 @@ use paperless_api_macros::UpdateDto;
 
 use crate::{
     Error, Result,
+    attributes::{custom_field::DocumentCustomField, permission::ItemPermissions},
     client::PaperlessClient,
     id::{
         CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, StoragePathId, TagId, UserId,
     },
-    metadata::{custom_field::DocumentCustomField, permission::ItemPermissions},
     note::Note,
     share_link::{CreateShareLink, ShareLink, ShareLinkFileVersion},
 };
