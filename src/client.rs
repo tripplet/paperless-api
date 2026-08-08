@@ -110,6 +110,10 @@ impl PaperlessClient {
     /// * `base_url` - The base URL of the Paperless API.
     /// * `token` - The authentication token for the Paperless API.
     /// * `headers` - Optional additional headers to include in requests.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the client builder fails or headers are invalid.
     pub fn new(
         base_url: &str,
         token: &str,
@@ -134,6 +138,10 @@ impl PaperlessClient {
     /// * `token` - The authentication token for the Paperless API.
     /// * `headers` - Optional additional headers to include in requests.
     /// * `client_builder` - [`reqwest::ClientBuilder`] to use for creating the HTTP client.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the client builder fails or headers are invalid.
     pub fn new_with_client(
         base_url: &str,
         token: &str,
@@ -199,6 +207,10 @@ impl PaperlessClient {
     }
 
     /// Loads all items of the given item type from the API.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the request fails.
     pub async fn load_items<T: Item + DeserializeOwned>(&self) -> Result<HashMap<T::Id, T>> {
         let endpoint = format!("/api/{}/", T::endpoint());
         debug!(endpoint, "Loading");
@@ -233,6 +245,10 @@ impl PaperlessClient {
     /// Refresh and cache all attributes.
     ///
     /// Only updates the cache for this instance, cloned instances will not see the changes.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the refresh fails.
     pub async fn refresh_all(&mut self) -> Result<()> {
         self.refresh(enum_iterator::all::<RefreshAttributes>())
             .await
@@ -246,6 +262,10 @@ impl PaperlessClient {
     ///
     /// * `data` - The attributes to refresh.
     /// * `full_permissions` - Whether to use request full permissions data for the items being refreshed.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the refresh fails.
     pub async fn refresh(
         &mut self,
         data: impl IntoIterator<Item = RefreshAttributes>,
@@ -331,6 +351,10 @@ impl PaperlessClient {
     }
 
     /// Query documents using the given [`DocumentQueryBuilder`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the query fails.
     pub async fn query_documents(&self, query: DocumentQueryBuilder) -> Result<Vec<Document>> {
         let full_content = query.full_content;
         let query_params = query.build();
@@ -401,6 +425,10 @@ impl PaperlessClient {
     }
 
     /// Get a document by its ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the request fails to fetch the document.
     pub async fn get_document_by_id(
         &self,
         id: DocumentId,
@@ -562,6 +590,10 @@ impl PaperlessClient {
     }
 
     /// Get all tasks with optional filtering by ID, name, or acknowledged status.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the request fails to fetch the task status.
     pub async fn get_task_status(
         &self,
         task_id: Option<&TaskId>,
@@ -610,6 +642,10 @@ impl PaperlessClient {
     /// All structs which implement [`CreateDto`] can be used as `new_item`.
     ///
     /// Returns the created item.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the request fails to create the item on the server.
     pub async fn create<T>(&self, new_item: &T) -> Result<T::BaseType>
     where
         T: CreateDto,
@@ -625,6 +661,10 @@ impl PaperlessClient {
     /// All structs which implement [`UpdateDto`] can be used as `item`.
     ///
     /// Returns the updated item
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the updating of the item fails.
     pub async fn update<T>(&self, id: T::Id, update: &T) -> Result<T::BaseType>
     where
         T: UpdateDto,
@@ -638,6 +678,10 @@ impl PaperlessClient {
     /// Deletes an existing item.
     ///
     /// Can be used for all [`ItemId`]s
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the deletion fails.
     pub async fn delete<T: ItemId>(&self, id: T) -> Result<()> {
         let url = format!("/api/{}/{}/", T::endpoint(), id);
         self.request_no_body(Method::DELETE, &url, None).await?;
@@ -647,6 +691,10 @@ impl PaperlessClient {
     /// Load an existing item directly from the server, bypassing the caches.
     ///
     /// All structs which implement [`Item`] can be used.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if request fails.
     pub async fn load_by_id<T: Item>(&self, id: T::Id) -> Result<Option<T>> {
         let url = format!("/api/{}/{}/", T::endpoint(), id);
         match self.request_json_no_body(Method::GET, &url, None).await {
@@ -659,6 +707,10 @@ impl PaperlessClient {
     /// Upload a document to Paperless.
     ///
     /// Returns the task ID on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the upload fail.
     pub async fn upload_document(&self, file_path: &Path, filename: &str) -> Result<TaskId> {
         let stream = tokio::fs::File::open(file_path)
             .await
@@ -731,6 +783,10 @@ impl PaperlessClient {
     }
 
     /// Search for documents.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the search request fails.
     pub async fn search(&self, search: &str) -> Result<Vec<(Document, SearchHit)>> {
         let doc_client = Arc::new(self.clone());
 

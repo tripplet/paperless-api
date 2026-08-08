@@ -425,6 +425,10 @@ impl Document {
     /// Refresh the document from the server.
     ///
     /// This will discard any local changes and replace them with the server's state.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the request fails to refresh the document data.
     pub async fn refresh(&mut self) -> Result<()> {
         let document_data = self
             .client
@@ -440,6 +444,10 @@ impl Document {
     /// Get the document thumbnail.
     ///
     /// Returns the raw thumbnail image data.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the thumbnail fails to download.
     pub async fn thumbnail(&self) -> Result<Vec<u8>> {
         let resp = self
             .client
@@ -460,6 +468,10 @@ impl Document {
     /// Update the document on the server.
     ///
     /// This applies the currently tracked local changes to the remote Paperless document.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the updating of the document data on the server fails.
     pub async fn patch(&mut self) -> Result<()> {
         if !self.is_dirty() {
             return Ok(());
@@ -533,6 +545,10 @@ impl Document {
     }
 
     /// Delete the document
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the delete fails.
     pub async fn delete(&mut self) -> Result<()> {
         self.client
             .request_no_body(
@@ -547,6 +563,10 @@ impl Document {
     }
 
     /// Get the full content of the document, replacing any truncated content.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the request fails to fetch the full content of the document.
     pub async fn get_full_content(&mut self) -> Result<()> {
         self.fail_if_deleted()?;
 
@@ -564,6 +584,10 @@ impl Document {
     }
 
     /// Download the document to a buffer.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the download fails or the response is not successful.
     pub async fn download_to_buffer(&self) -> Result<Vec<u8>> {
         self.fail_if_deleted()?;
 
@@ -591,6 +615,10 @@ impl Document {
     }
 
     /// Download the document to a file, requires the `tokio-fs` feature.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the download fails.
     pub async fn download_to_file(&self, path: &std::path::Path) -> Result<()> {
         self.fail_if_deleted()?;
 
@@ -638,6 +666,10 @@ impl Document {
     }
 
     /// Generates a share link for the document that expires at the specified time.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the request fails to generate the share link.
     pub async fn generate_share_link_expires(
         &self,
         expires: DateTime<Utc>,
