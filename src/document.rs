@@ -91,11 +91,29 @@ pub(crate) struct DocumentData {
 
     #[dto(skip)]
     mime_type: Option<String>,
+
+    #[dto(skip)]
+    root_document: Option<DocumentId>,
+
+    #[dto(skip)]
+    versions: Vec<DocumentVersion>,
 }
 
 #[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
 #[repr(transparent)]
 pub struct ArchiveSerialNumber(pub u32);
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct DocumentVersion {
+    pub id: DocumentId,
+    pub added: DateTime<Utc>,
+
+    #[serde(rename = "version_label")]
+    pub label: Option<String>,
+
+    pub checksum: Option<String>,
+    pub is_root: bool,
+}
 
 #[bitflags]
 #[repr(u16)]
@@ -193,6 +211,20 @@ impl Document {
     #[must_use]
     pub fn mime_type(&self) -> Option<&str> {
         self.data.mime_type.as_deref()
+    }
+
+    /// Get the versions of the document.
+    #[inline]
+    #[must_use]
+    pub fn versions(&self) -> &[DocumentVersion] {
+        &self.data.versions
+    }
+
+    /// Get the root document id of the document.
+    #[inline]
+    #[must_use]
+    pub fn root_document(&self) -> Option<DocumentId> {
+        self.data.root_document
     }
 
     /// Get the correspondent id of the document.
