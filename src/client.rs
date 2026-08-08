@@ -340,11 +340,12 @@ impl PaperlessClient {
             .map(|(k, v)| (k, Cow::Owned(v)))
             .collect();
 
+        let doc_client = Arc::new(self.clone());
         let documents: Vec<_> = self
             .fetch_all_pages::<DocumentData>("/api/documents/", Some(&query))
             .await?
             .into_iter()
-            .map(|data| Document::new(data, Arc::new(self.clone()), !full_content))
+            .map(|data| Document::new(data, doc_client.clone(), !full_content))
             .collect();
 
         Ok(documents)
@@ -731,6 +732,8 @@ impl PaperlessClient {
 
     /// Search for documents.
     pub async fn search(&self, search: &str) -> Result<Vec<(Document, SearchHit)>> {
+        let doc_client = Arc::new(self.clone());
+
         let results = self
             .fetch_all_pages::<SearchResult>(
                 "/api/documents/",
@@ -742,7 +745,7 @@ impl PaperlessClient {
                 (
                     Document::new(
                         result.document_data,
-                        Arc::new(self.clone()),
+                        doc_client.clone(),
                         !self.request_full_content,
                     ),
                     result.search_hit,
