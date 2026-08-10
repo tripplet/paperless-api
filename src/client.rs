@@ -716,9 +716,21 @@ impl PaperlessClient {
             .await
             .map_err(|e| Error::Other(format!("Failed to open file: {e}")))?;
 
+        // Send the part with a known length so that reqwest emits a Content-Length
+        // header for the whole multipart body. With an unknown length it falls back
+        // to `Transfer-Encoding: chunked` without Content-Length, and Django-based
+        // paperless then parses the request as empty ("No file was submitted")
+        // unless a buffering reverse proxy re-adds the header
+        // (see https://code.djangoproject.com/ticket/35289).
+        let file_len = stream
+            .metadata()
+            .await
+            .map_err(|e| Error::Other(format!("Failed to read file metadata: {e}")))?
+            .len();
+
         let form = multipart::Form::new().part(
             "document",
-            multipart::Part::stream(stream).file_name(filename.to_string()),
+            multipart::Part::stream_with_length(stream, file_len).file_name(filename.to_string()),
         );
 
         let url = format!("{}/api/documents/post_document/", self.base_url);
