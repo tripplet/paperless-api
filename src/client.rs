@@ -22,7 +22,7 @@ use crate::{
     dto::{CreateDto, Item, UpdateDto},
     id::{
         CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, GroupId, ItemId, StoragePathId,
-        TagId, TaskId, UserId,
+        TagId, TaskId, UniqueTaskId, UserId,
     },
     task::Task,
     util,
@@ -589,14 +589,14 @@ impl PaperlessClient {
         Ok(results)
     }
 
-    /// Get all tasks with optional filtering by ID, name, or acknowledged status.
+    /// Get all tasks with optional filtering by their unique ID, name, or acknowledged status.
     ///
     /// # Errors
     ///
     /// Returns an error if the request fails to fetch the task status.
     pub async fn get_task_status(
         &self,
-        task_id: Option<&TaskId>,
+        task_id: Option<&UniqueTaskId>,
         task_name: Option<&str>,
         acknowledged: Option<bool>,
     ) -> Result<Vec<Task>> {
@@ -615,6 +615,48 @@ impl PaperlessClient {
         }
 
         self.fetch_all_pages("/api/tasks/", Some(&query)).await
+    }
+
+    /// Get a task by its ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the request fails to fetch the task.
+    pub async fn get_task_by_id(&self, task_id: &crate::id::TaskId) -> Result<Option<Task>> {
+        let url = format!("/api/tasks/{task_id}/");
+        match self.request_json_no_body(Method::GET, &url, None).await {
+            found_item @ Ok(_) => found_item,
+            Err(Error::NotFound) => Ok(None),
+            err @ Err(_) => err,
+        }
+    }
+
+    /// Acknowledge tasks.
+    ///
+    /// # Arguments
+    ///
+    /// * `tasks` - A slice of [`TaskId`]s or [`Task`]s to acknowledge.
+    /// * `all` - Whether to acknowledge all tasks of the same type.
+    ///
+    /// # Errors
+    ///
+    /// Paperless will reject a request if `all` is `true` and specific tasks are provided.
+    pub async fn acknowledge_tasks<T>(&self, tasks: &[T], all: bool) -> Result<()>
+    where
+        for<'a> &'a T: Into<TaskId>,
+    {
+        let request = crate::task::AcknowledgeRequest {
+            task_ids: tasks.iter().map(std::convert::Into::into).collect(),
+            all: if all { Some(true) } else { None },
+        };
+
+        self.request_json(
+            Method::POST,
+            "/api/tasks/acknowledge/",
+            Some(&request),
+            None,
+        )
+        .await
     }
 
     /// Get all workflows.
@@ -711,7 +753,7 @@ impl PaperlessClient {
     /// # Errors
     ///
     /// Returns an error if the upload fail.
-    pub async fn upload_document(&self, file_path: &Path, filename: &str) -> Result<TaskId> {
+    pub async fn upload_document(&self, file_path: &Path, filename: &str) -> Result<UniqueTaskId> {
         let stream = tokio::fs::File::open(file_path)
             .await
             .map_err(|e| Error::Other(format!("Failed to open file: {e}")))?;
@@ -755,7 +797,7 @@ impl PaperlessClient {
             .json()
             .await
             .map_err(|e| Error::Other(format!("Failed to parse task ID: {e:?}")))?;
-        Ok(TaskId(task_id))
+        Ok(UniqueTaskId(task_id))
     }
 
     /// Get the tags cache.

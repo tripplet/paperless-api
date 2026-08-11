@@ -5,14 +5,16 @@ use std::time::Duration;
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 
+use crate::id::{TaskId, UniqueTaskId};
+
 /// A paperless task.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Task {
     /// Unique identifier of the task.
-    pub id: u32,
+    pub id: crate::id::TaskId,
 
     /// The Celery-ID of the task.
-    pub task_id: crate::id::TaskId,
+    pub task_id: crate::id::UniqueTaskId,
 
     /// The type of the task.
     pub task_type: TaskType,
@@ -63,7 +65,37 @@ pub struct Task {
     pub acknowledged: bool,
 
     /// The user who owns the task.
-    pub owner: crate::id::UserId,
+    pub owner: Option<crate::id::UserId>,
+}
+
+impl From<&Task> for TaskId {
+    fn from(task: &Task) -> Self {
+        task.id
+    }
+}
+
+impl From<&TaskId> for TaskId {
+    fn from(id: &TaskId) -> Self {
+        *id
+    }
+}
+
+impl From<Task> for TaskId {
+    fn from(task: Task) -> Self {
+        task.id
+    }
+}
+
+impl From<Task> for UniqueTaskId {
+    fn from(task: Task) -> Self {
+        task.task_id
+    }
+}
+
+impl From<&Task> for UniqueTaskId {
+    fn from(task: &Task) -> Self {
+        task.task_id.clone()
+    }
 }
 
 /// The status of a task.
@@ -76,11 +108,6 @@ pub enum TaskStatus {
     Failure,
     Revoked,
 }
-
-/// The name of a task.
-#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum TaskName {}
 
 /// The type of a task.
 #[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
@@ -111,6 +138,15 @@ pub enum TaskTriggerSource {
     EmailConsume,
     System,
     Manual,
+}
+
+#[derive(Serialize)]
+pub(crate) struct AcknowledgeRequest {
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub(crate) task_ids: Vec<TaskId>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) all: Option<bool>,
 }
 
 fn deserialize_duration_seconds<'de, D>(deserializer: D) -> Result<Option<Duration>, D::Error>
