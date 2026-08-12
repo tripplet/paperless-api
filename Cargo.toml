@@ -7,7 +7,7 @@ repository = "https://github.com/tripplet/paperless-api"
 edition = "2024"
 
 [workspace]
-members = ["paperless-api-macros"]
+members = ["paperless-api-macros", "tests"]
 
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }

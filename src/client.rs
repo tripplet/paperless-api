@@ -532,9 +532,8 @@ impl PaperlessClient {
             .client
             .execute(req)
             .await
-            .map_err(|e| Error::Other(format!("Failed to send request: {e}")))?;
+            .map_err(|err| Error::Other(format!("Failed to send request: {err}")))?;
 
-        // Log the response body for debugging
         debug!(status = ?resp.status(), "Response");
 
         if resp.status() == StatusCode::NOT_FOUND {

@@ -1,0 +1,36 @@
+name: Paperless Integration
+
+on: [push]
+
+jobs:
+  paperless:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Start Paperless
+        run: |
+          docker compose --file tests/docker-compose.paperless-integration.yml pull --quiet
+          docker compose --file tests/docker-compose.paperless-integration.yml up --detach --wait
+      - name: Wait for Paperless and acquire an API token
+        run: |
+          for attempt in {1..45}; do
+            response="$(curl --fail --silent \
+              --header 'Content-Type: application/json' \
+              --data '{"username":"paperless-api-ci","password":"paperless-api-ci-password"}' \
+              http://127.0.0.1:18000/api/token/ || true)"
+            token="$(jq --raw-output '.token // empty' <<<"$response")"
+            if [[ -n "$token" ]]; then
+              echo "::add-mask::$token"
+              echo "PAPERLESS_TEST_URL=http://127.0.0.1:18000" >> "$GITHUB_ENV"
+              echo "PAPERLESS_TEST_TOKEN=$token" >> "$GITHUB_ENV"
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose --file docker-compose.paperless-integration.yml logs
+          exit 1
+      - name: Stop Paperless
+        if: always()
+        run: |
+          docker compose --file tests/docker-compose.paperless-integration.yml logs
+          docker compose --file tests/docker-compose.paperless-integration.yml down --volumes
