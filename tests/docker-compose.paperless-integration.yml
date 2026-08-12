@@ -1,0 +1,20 @@
+name: paperless-api-integration
+
+services:
+  redis:
+    image: redis:7-alpine
+
+  paperless:
+    image: ghcr.io/paperless-ngx/paperless-ngx:3.0.5
+    depends_on:
+      redis:
+        condition: service_started
+    ports:
+      - "18000:8000"
+    environment:
+      PAPERLESS_REDIS: redis://redis:6379
+      PAPERLESS_SECRET_KEY: paperless-api-ci-secret-key-change-me
+      PAPERLESS_URL: http://127.0.0.1:18000
+      PAPERLESS_ADMIN_USER: paperless-api-ci
+      PAPERLESS_ADMIN_PASSWORD: paperless-api-ci-password
+      PAPERLESS_ADMIN_MAIL: paperless-api-ci@example.invalid

@@ -17,9 +17,7 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: Build
-        run: cargo build --release --locked --all-features
       - name: Clippy
-        run: cargo clippy
+        run: cargo clippy --release --locked --all-targets --all-features -- -D warnings
       - name: Run Tests
-        run: cargo test --release
+        run: cargo test --release --locked --all-features
