@@ -102,6 +102,24 @@ struct PaginatedResponse<T> {
     next: Option<String>,
 }
 
+#[derive(Serialize)]
+struct TokenRequest<'a> {
+    username: &'a str,
+    password: &'a str,
+}
+
+#[derive(Deserialize)]
+struct TokenResponse {
+    token: String,
+}
+
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+enum PayloadLogging {
+    #[default]
+    Enabled,
+    Disabled,
+}
+
 impl PaperlessClient {
     /// Create a new Paperless client.
     ///
@@ -118,7 +136,7 @@ impl PaperlessClient {
         base_url: &str,
         token: &str,
         headers: Option<&HashMap<String, String>>,
-    ) -> std::result::Result<Self, String> {
+    ) -> Result<Self> {
         Self::new_with_client(
             base_url,
             token,
@@ -147,27 +165,21 @@ impl PaperlessClient {
         token: &str,
         headers: Option<&HashMap<String, String>>,
         client_builder: reqwest::ClientBuilder,
-    ) -> std::result::Result<Self, String> {
+    ) -> Result<Self> {
         let mut headers_map = HeaderMap::new();
 
         // Add additional headers if provided
         if let Some(headers) = headers {
-            for (key, value) in headers {
-                headers_map.insert(
-                    HeaderName::from_str(key).map_err(|err| err.to_string())?,
-                    value
-                        .parse()
-                        .map_err(|err: InvalidHeaderValue| err.to_string())?,
-                );
-            }
+            headers_map = create_header_map(headers)?;
         }
 
         // Add the Paperless token header
         headers_map.insert(
-            HeaderName::from_str("Authorization").map_err(|err| err.to_string())?,
+            HeaderName::from_str("Authorization")
+                .map_err(|err| Error::InvalidHeader(err.to_string()))?,
             format!("Token {token}")
                 .parse()
-                .map_err(|err: InvalidHeaderValue| err.to_string())?,
+                .map_err(|err: InvalidHeaderValue| Error::InvalidHeader(err.to_string()))?,
         );
 
         Ok(Self {
@@ -177,7 +189,7 @@ impl PaperlessClient {
             client: client_builder
                 .default_headers(headers_map)
                 .build()
-                .map_err(|err| err.to_string())?,
+                .map_err(|err| Error::Other(err.to_string()))?,
             cached_data: Arc::new(CachedData {
                 custom_fields: HashMap::new(),
                 correspondents: HashMap::new(),
@@ -188,6 +200,44 @@ impl PaperlessClient {
                 users: HashMap::new(),
             }),
         })
+    }
+
+    /// Request an API token using Paperless login credentials.
+    ///
+    /// The returned token can be used to create a [`PaperlessClient`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the request fails, the credentials are rejected, or the response is
+    /// invalid.
+    pub async fn request_token(
+        base_url: &str,
+        headers: Option<&HashMap<String, String>>,
+        client_builder: Option<reqwest::ClientBuilder>,
+        username: &str,
+        password: &str,
+    ) -> Result<String> {
+        let mut client = client_builder.unwrap_or_else(|| reqwest::Client::builder().zstd(true));
+
+        if let Some(headers) = headers {
+            client = client.default_headers(create_header_map(headers)?);
+        }
+
+        let client = client.build().map_err(|err| Error::Request(err.into()))?;
+
+        let endpoint = format!("{}/api/token/", base_url.trim_end_matches('/'));
+        let request = client
+            .post(&endpoint)
+            .header(ACCEPT, "application/json")
+            .json(&TokenRequest { username, password })
+            .build()
+            .map_err(|err| Error::Request(err.into()))?;
+
+        let response = Self::send_request(&client, request, PayloadLogging::Disabled).await?;
+
+        Self::response_json::<TokenResponse>(response, PayloadLogging::Disabled)
+            .await
+            .map(|response| response.token)
     }
 
     /// Sets whether to request full permissions data for items during refresh.
@@ -464,7 +514,14 @@ impl PaperlessClient {
     ) -> Result<T> {
         let resp = self.request(method, endpoint, body, query_params).await?;
 
-        if tracing::enabled!(tracing::Level::TRACE) {
+        Self::response_json(resp, PayloadLogging::default()).await
+    }
+
+    async fn response_json<T: serde::de::DeserializeOwned>(
+        resp: reqwest::Response,
+        payload_logging: PayloadLogging,
+    ) -> Result<T> {
+        if payload_logging == PayloadLogging::Enabled && tracing::enabled!(tracing::Level::TRACE) {
             // Only log the response body if trace logging is enabled to avoid unnecessary overhead
             let response_text = resp.text().await.unwrap_or_default();
             trace!(body = %response_text, "Response");
@@ -479,7 +536,7 @@ impl PaperlessClient {
         }
     }
 
-    /// Make a request and return the raw [`reqwest::Response`].
+    /// Make a request with no body and return the raw [`reqwest::Response`].
     pub(crate) fn request_no_body(
         &self,
         method: Method,
@@ -497,6 +554,24 @@ impl PaperlessClient {
         body: Option<&impl Serialize>,
         query_params: Option<&HashMap<&str, Cow<'_, str>>>,
     ) -> Result<reqwest::Response> {
+        self.request_with_logging(
+            method,
+            endpoint,
+            body,
+            query_params,
+            PayloadLogging::default(),
+        )
+        .await
+    }
+
+    async fn request_with_logging(
+        &self,
+        method: Method,
+        endpoint: &str,
+        body: Option<&impl Serialize>,
+        query_params: Option<&HashMap<&str, Cow<'_, str>>>,
+        payload_logging: PayloadLogging,
+    ) -> Result<reqwest::Response> {
         let mut req = self
             .client
             .request(method, format!("{}{endpoint}", self.base_url))
@@ -513,7 +588,16 @@ impl PaperlessClient {
 
         let req = req.build().map_err(|e| Error::Request(e.into()))?;
 
-        if tracing::enabled!(tracing::Level::TRACE)
+        Self::send_request(&self.client, req, payload_logging).await
+    }
+
+    async fn send_request(
+        client: &reqwest::Client,
+        req: reqwest::Request,
+        payload_logging: PayloadLogging,
+    ) -> Result<reqwest::Response> {
+        if payload_logging == PayloadLogging::Enabled
+            && tracing::enabled!(tracing::Level::TRACE)
             && let Some(body) = req.body().and_then(|b| b.as_bytes())
         {
             trace!(
@@ -528,8 +612,7 @@ impl PaperlessClient {
                 "Sending request to Paperless API");
         }
 
-        let resp = self
-            .client
+        let resp = client
             .execute(req)
             .await
             .map_err(|err| Error::Other(format!("Failed to send request: {err}")))?;
@@ -901,4 +984,19 @@ impl PaperlessClient {
     pub fn groups(&self) -> &HashMap<GroupId, Group> {
         &self.cached_data.groups
     }
+}
+
+fn create_header_map(headers: &HashMap<String, String>) -> Result<HeaderMap> {
+    let mut headers_map = HeaderMap::new();
+
+    for (key, value) in headers {
+        headers_map.insert(
+            HeaderName::from_str(key).map_err(|err| Error::InvalidHeader(err.to_string()))?,
+            value
+                .parse()
+                .map_err(|err: InvalidHeaderValue| Error::InvalidHeader(err.to_string()))?,
+        );
+    }
+
+    Ok(headers_map)
 }

@@ -11,24 +11,20 @@ jobs:
         run: |
           docker compose --file tests/docker-compose.paperless-integration.yml pull --quiet
           docker compose --file tests/docker-compose.paperless-integration.yml up --detach --wait
-      - name: Wait for Paperless and acquire an API token
-        run: |
-          for attempt in {1..45}; do
-            response="$(curl --fail --silent \
-              --header 'Content-Type: application/json' \
-              --data '{"username":"paperless-api-ci","password":"paperless-api-ci-password"}' \
-              http://127.0.0.1:18000/api/token/ || true)"
-            token="$(jq --raw-output '.token // empty' <<<"$response")"
-            if [[ -n "$token" ]]; then
-              echo "::add-mask::$token"
-              echo "PAPERLESS_TEST_URL=http://127.0.0.1:18000" >> "$GITHUB_ENV"
-              echo "PAPERLESS_TEST_TOKEN=$token" >> "$GITHUB_ENV"
-              exit 0
-            fi
-            sleep 2
-          done
-          docker compose --file docker-compose.paperless-integration.yml logs
-          exit 1
+      - name: Install Rust (Stable)
+        run: curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal
+      - uses: actions/cache@v5
+        with:
+          path: |
+            ~/.rustup/
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-integration-${{ hashFiles('**/Cargo.lock') }}
+      - name: Run Paperless integration tests
+        run: cargo test --release --locked --package paperless-api-integration-tests -- --nocapture
       - name: Stop Paperless
         if: always()
         run: |
