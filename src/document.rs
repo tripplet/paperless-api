@@ -624,7 +624,7 @@ impl Document {
         )
     }
 
-    /// Download the document to a file, requires the `tokio-fs` feature.
+    /// Download the document to a file.
     ///
     /// # Errors
     ///
@@ -661,6 +661,10 @@ impl Document {
                 Ok(file)
             })
             .await?;
+
+        file.flush()
+            .await
+            .map_err(|e| Error::Other(format!("Failed to flush downloaded document: {e}")))?;
 
         Ok(())
     }
