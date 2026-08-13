@@ -30,6 +30,7 @@ struct TestConfig {
     #[serde(default)]
     password: Option<String>,
     document_path: PathBuf,
+    second_document_path: PathBuf,
     #[serde(default = "default_task_timeout_seconds")]
     task_timeout_seconds: u64,
     #[serde(default = "default_poll_interval_milliseconds")]
@@ -39,6 +40,7 @@ struct TestConfig {
 pub(crate) struct TestContext {
     pub(crate) client: PaperlessClient,
     pub(crate) document_path: PathBuf,
+    pub(crate) second_document_path: PathBuf,
     task_timeout: Duration,
     poll_interval: Duration,
 }
@@ -60,6 +62,7 @@ pub(crate) async fn context() -> TestResult<&'static TestContext> {
             Ok::<TestContext, TestError>(TestContext {
                 client: PaperlessClient::new(&config.base_url, &token, None)?,
                 document_path: config.document_path,
+                second_document_path: config.second_document_path,
                 task_timeout: Duration::from_secs(config.task_timeout_seconds),
                 poll_interval: Duration::from_millis(config.poll_interval_milliseconds),
             })
@@ -166,12 +169,21 @@ fn load_config() -> TestResult<TestConfig> {
             .unwrap_or_else(|| Path::new("."))
             .join(&config.document_path);
     }
-    if !config.document_path.is_file() {
+    if config.second_document_path.is_relative() {
+        config.second_document_path = path
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .join(&config.second_document_path);
+    }
+    for document_path in [&config.document_path, &config.second_document_path] {
+        if document_path.is_file() {
+            continue;
+        }
         return Err(io::Error::new(
             io::ErrorKind::NotFound,
             format!(
                 "configured test document does not exist: {}",
-                config.document_path.display()
+                document_path.display()
             ),
         )
         .into());

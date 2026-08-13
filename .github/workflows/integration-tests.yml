@@ -1,6 +1,20 @@
 name: Paperless Integration
 
-on: [push]
+on:
+  push:
+    branches:
+      - "**"
+    paths:
+      - ".github/workflows/paperless-integration.yml"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "paperless-api-macros/**"
+      - "src/**"
+      - "tests/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   paperless:
