@@ -5,6 +5,7 @@ on: [push]
 jobs:
   paperless:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
       - name: Start Paperless
@@ -22,7 +23,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-integration-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Run Paperless integration tests
         run: cargo test --release --locked --package paperless-api-integration-tests -- --nocapture
       - name: Stop Paperless
