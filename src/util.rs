@@ -8,13 +8,13 @@ pub struct Statistics {
     pub documents_total: u32,
 
     /// Number of documents in the inbox.
-    pub documents_inbox: u32,
+    pub documents_inbox: Option<u32>,
 
     /// Tag used for documents in the inbox.
-    pub inbox_tag: u32,
+    pub inbox_tag: Option<u32>,
 
     /// Tags used for documents in the inbox.
-    pub inbox_tags: Vec<u32>,
+    pub inbox_tags: Option<Vec<u32>>,
 
     /// Counts of document file types.
     pub document_file_type_counts: Vec<DocumentFileTypeCount>,
