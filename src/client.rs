@@ -646,17 +646,18 @@ impl PaperlessClient {
         for<'a> &'a T: Into<TaskId>,
     {
         let request = crate::task::AcknowledgeRequest {
-            task_ids: tasks.iter().map(std::convert::Into::into).collect(),
+            tasks: tasks.iter().map(std::convert::Into::into).collect(),
             all: if all { Some(true) } else { None },
         };
 
-        self.request_json(
+        self.request(
             Method::POST,
             "/api/tasks/acknowledge/",
             Some(&request),
             None,
         )
-        .await
+        .await?;
+        Ok(())
     }
 
     /// Get all workflows.

@@ -143,7 +143,7 @@ pub enum TaskTriggerSource {
 #[derive(Serialize)]
 pub(crate) struct AcknowledgeRequest {
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub(crate) task_ids: Vec<TaskId>,
+    pub(crate) tasks: Vec<TaskId>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) all: Option<bool>,
