@@ -14,7 +14,7 @@ use chrono::{DateTime, NaiveDate, Utc};
 use derive_more::Display;
 use enumflags2::{BitFlags, bitflags};
 use futures_util::TryStreamExt;
-use reqwest::Method;
+use reqwest::{Method, Response};
 use serde::{Deserialize, Serialize};
 use tokio::io::AsyncWriteExt;
 
@@ -583,22 +583,42 @@ impl Document {
         Ok(())
     }
 
-    /// Download the document to a buffer.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the download fails or the response is not successful.
-    pub async fn download_to_buffer(&self, original: bool) -> Result<Vec<u8>> {
+    async fn download_request(&self, original: bool) -> Result<Response> {
         self.fail_if_deleted()?;
 
         let resp = self
             .client
             .request_no_body(
                 Method::GET,
-                &format!("/api/documents/{}/download/?original={original}"),
+                &format!(
+                    "/api/documents/{}/download/?original={original}",
+                    self.data.id
+                ),
                 None,
             )
             .await?;
+
+        if !resp.status().is_success() {
+            Err(Error::Other(format!(
+                "Failed to download document: {}",
+                resp.status()
+            )))
+        } else {
+            Ok(resp)
+        }
+    }
+
+    /// Download the document to a buffer.
+    ///
+    /// # Arguments
+    ///
+    /// * `original` - Whether to download the original document or the processed version.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the download fails.
+    pub async fn download_to_buffer(&self, original: bool) -> Result<Vec<u8>> {
+        let resp = self.download_request(original).await?;
 
         if resp.status().is_success() {
             let bytes = resp
@@ -614,39 +634,18 @@ impl Document {
         }
     }
 
-    /// Returns the link to the document page.
-    #[must_use]
-    pub fn page_link(&self) -> String {
-        format!(
-            "{base_url}/documents/{id}/",
-            base_url = self.client.base_url,
-            id = self.data.id
-        )
-    }
-
     /// Download the document to a file, requires the `tokio-fs` feature.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path, where the downloaded file will be saved.
+    /// * `original` - Whether to download the original document or the processed version.
     ///
     /// # Errors
     ///
     /// Returns an error if the download fails.
     pub async fn download_to_file(&self, path: &std::path::Path, original: bool) -> Result<()> {
-        self.fail_if_deleted()?;
-
-        let resp = self
-            .client
-            .request_no_body(
-                Method::GET,
-                &format!("/api/documents/{}/download/?original={original}", self.data.id),
-                None,
-            )
-            .await?;
-
-        if !resp.status().is_success() {
-            return Err(Error::Other(format!(
-                "Failed to download document: {}",
-                resp.status()
-            )));
-        }
+        let resp = self.download_request(original).await?;
 
         let mut file = tokio::fs::File::create(path)
             .await
@@ -673,6 +672,16 @@ impl Document {
     ) -> impl Future<Output = Result<ShareLink>> {
         let expires = Utc::now() + valid_for;
         self.generate_share_link_expires(expires, version)
+    }
+
+    /// Returns the link to the document page.
+    #[must_use]
+    pub fn page_link(&self) -> String {
+        format!(
+            "{base_url}/documents/{id}/",
+            base_url = self.client.base_url,
+            id = self.data.id
+        )
     }
 
     /// Generates a share link for the document that expires at the specified time.
