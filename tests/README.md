@@ -15,7 +15,8 @@ docker compose --file tests/docker-compose.paperless-integration.yml down --volu
 The normal suite runs three API-area scenarios in order:
 
 1. `documents` uploads two PDFs, polls and acknowledges their tasks, reads and patches the primary
-   document, downloads its original and thumbnail, queries both documents, and removes them.
+   document, downloads its original and processed versions plus its thumbnail, queries both
+   documents, and removes them.
 2. `attributes` exercises create, update, direct loading, cached loading, and deletion for tags,
    correspondents, and document types.
 3. `server` checks status, statistics, workflows, saved views, and all refreshable caches.

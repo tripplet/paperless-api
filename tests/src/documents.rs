@@ -60,7 +60,9 @@ pub(crate) async fn document_lifecycle(context: &TestContext) -> TestResult {
         );
 
         let source = fs::read(&context.document_path)?;
-        assert_eq!(document.download_to_buffer().await?, source);
+        assert_eq!(document.download_to_buffer(true).await?, source);
+        let processed = document.download_to_buffer(false).await?;
+        assert!(processed.starts_with(b"%PDF-"));
 
         let second_document = context
             .client
@@ -82,13 +84,26 @@ pub(crate) async fn document_lifecycle(context: &TestContext) -> TestResult {
         );
 
         let second_source = fs::read(&context.second_document_path)?;
-        assert_eq!(second_document.download_to_buffer().await?, second_source);
+        assert_eq!(
+            second_document.download_to_buffer(true).await?,
+            second_source
+        );
 
-        let download_path = support::temporary_path("pdf");
-        document.download_to_file(&download_path).await?;
-        let downloaded = fs::read(&download_path);
-        let _ = fs::remove_file(&download_path);
-        assert_eq!(downloaded?, source);
+        let original_download_path = support::temporary_path("pdf");
+        document
+            .download_to_file(&original_download_path, true)
+            .await?;
+        let original_downloaded = fs::read(&original_download_path);
+        let _ = fs::remove_file(&original_download_path);
+        assert_eq!(original_downloaded?, source);
+
+        let processed_download_path = support::temporary_path("pdf");
+        document
+            .download_to_file(&processed_download_path, false)
+            .await?;
+        let processed_downloaded = fs::read(&processed_download_path);
+        let _ = fs::remove_file(&processed_download_path);
+        assert_eq!(processed_downloaded?, processed);
 
         let thumbnail = document.thumbnail().await?;
         assert!(!thumbnail.is_empty());
