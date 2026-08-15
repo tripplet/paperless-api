@@ -588,14 +588,14 @@ impl Document {
     /// # Errors
     ///
     /// Returns an error if the download fails or the response is not successful.
-    pub async fn download_to_buffer(&self) -> Result<Vec<u8>> {
+    pub async fn download_to_buffer(&self, original: bool) -> Result<Vec<u8>> {
         self.fail_if_deleted()?;
 
         let resp = self
             .client
             .request_no_body(
                 Method::GET,
-                &format!("/api/documents/{}/download/", self.data.id),
+                &format!("/api/documents/{}/download/?original={}", self.data.id, if original {"true"} else {"false"}),
                 None,
             )
             .await?;
@@ -629,14 +629,14 @@ impl Document {
     /// # Errors
     ///
     /// Returns an error if the download fails.
-    pub async fn download_to_file(&self, path: &std::path::Path) -> Result<()> {
+    pub async fn download_to_file(&self, path: &std::path::Path, original: bool) -> Result<()> {
         self.fail_if_deleted()?;
 
         let resp = self
             .client
             .request_no_body(
                 Method::GET,
-                &format!("/api/documents/{}/download/", self.data.id),
+                &format!("/api/documents/{}/download/?original={}", self.data.id, if original {"true"} else {"false"}),
                 None,
             )
             .await?;
