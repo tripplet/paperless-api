@@ -595,7 +595,7 @@ impl Document {
             .client
             .request_no_body(
                 Method::GET,
-                &format!("/api/documents/{}/download/?original={}", self.data.id, if original {"true"} else {"false"}),
+                &format!("/api/documents/{}/download/?original={original}"),
                 None,
             )
             .await?;
@@ -636,7 +636,7 @@ impl Document {
             .client
             .request_no_body(
                 Method::GET,
-                &format!("/api/documents/{}/download/?original={}", self.data.id, if original {"true"} else {"false"}),
+                &format!("/api/documents/{}/download/?original={original}", self.data.id),
                 None,
             )
             .await?;
