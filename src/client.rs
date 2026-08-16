@@ -21,8 +21,8 @@ use crate::{
     document_query::DocumentQueryBuilder,
     dto::{CreateDto, Item, UpdateDto},
     id::{
-        CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, GroupId, ItemId, StoragePathId,
-        TagId, TaskId, UniqueTaskId, UserId,
+        CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, DocumentVersionId, GroupId,
+        ItemId, StoragePathId, TagId, TaskId, UniqueTaskId, UserId,
     },
     task::Task,
     util,
@@ -118,7 +118,7 @@ impl PaperlessClient {
         base_url: &str,
         token: &str,
         headers: Option<&HashMap<String, String>>,
-    ) -> std::result::Result<Self, String> {
+    ) -> Result<Self> {
         Self::new_with_client(
             base_url,
             token,
@@ -147,27 +147,21 @@ impl PaperlessClient {
         token: &str,
         headers: Option<&HashMap<String, String>>,
         client_builder: reqwest::ClientBuilder,
-    ) -> std::result::Result<Self, String> {
+    ) -> Result<Self> {
         let mut headers_map = HeaderMap::new();
 
         // Add additional headers if provided
         if let Some(headers) = headers {
-            for (key, value) in headers {
-                headers_map.insert(
-                    HeaderName::from_str(key).map_err(|err| err.to_string())?,
-                    value
-                        .parse()
-                        .map_err(|err: InvalidHeaderValue| err.to_string())?,
-                );
-            }
+            headers_map = create_header_map(headers)?;
         }
 
         // Add the Paperless token header
         headers_map.insert(
-            HeaderName::from_str("Authorization").map_err(|err| err.to_string())?,
+            HeaderName::from_str("Authorization")
+                .map_err(|err| Error::InvalidHeader(err.to_string()))?,
             format!("Token {token}")
                 .parse()
-                .map_err(|err: InvalidHeaderValue| err.to_string())?,
+                .map_err(|err: InvalidHeaderValue| Error::InvalidHeader(err.to_string()))?,
         );
 
         Ok(Self {
@@ -177,7 +171,7 @@ impl PaperlessClient {
             client: client_builder
                 .default_headers(headers_map)
                 .build()
-                .map_err(|err| err.to_string())?,
+                .map_err(|err| Error::Other(err.to_string()))?,
             cached_data: Arc::new(CachedData {
                 custom_fields: HashMap::new(),
                 correspondents: HashMap::new(),
@@ -219,7 +213,7 @@ impl PaperlessClient {
         Ok(items.into_iter().map(|item| (item.id(), item)).collect())
     }
 
-    fn default_query_params(&self) -> Option<HashMap<&'static str, Cow<'_, str>>> {
+    fn default_query_params(&self) -> HashMap<&'static str, Cow<'_, str>> {
         let mut params = HashMap::new();
 
         if self.request_full_permissions {
@@ -235,11 +229,7 @@ impl PaperlessClient {
             );
         }
 
-        if params.is_empty() {
-            None
-        } else {
-            Some(params)
-        }
+        params
     }
 
     /// Refresh and cache all attributes.
@@ -391,40 +381,49 @@ impl PaperlessClient {
     pub(crate) async fn get_document_data_by_id(
         &self,
         id: DocumentId,
+        version: Option<DocumentVersionId>,
         full_content: Option<bool>,
         full_permissions: Option<bool>,
     ) -> Result<DocumentData> {
         let mut params = self.default_query_params();
 
-        if full_content.is_some() || full_permissions.is_some() {
-            let mut updated_params = params.unwrap_or_default();
+        if let Some(version) = version {
+            params.insert("version", Cow::Owned(version.to_string()));
+        }
 
-            if let Some(full_content) = full_content {
-                updated_params.insert(
-                    crate::document_query::QUERY_PARAM_TRUNCATE_CONTENT,
-                    Cow::Owned((!full_content).to_string()),
-                );
-            }
+        if let Some(full_content) = full_content {
+            params.insert(
+                crate::document_query::QUERY_PARAM_TRUNCATE_CONTENT,
+                Cow::Owned((!full_content).to_string()),
+            );
+        }
 
-            if let Some(full_permissions) = full_permissions {
-                updated_params.insert(
-                    crate::document_query::QUERY_PARAM_FULL_PERMISSIONS,
-                    Cow::Owned(full_permissions.to_string()),
-                );
-            }
-
-            params = Some(updated_params);
+        if let Some(full_permissions) = full_permissions {
+            params.insert(
+                crate::document_query::QUERY_PARAM_FULL_PERMISSIONS,
+                Cow::Owned(full_permissions.to_string()),
+            );
         }
 
         self.request_json_no_body(
             Method::GET,
             &format!("/api/documents/{}/", id.0),
-            params.as_ref(),
+            Some(&params),
         )
         .await
     }
 
     /// Get a document by its ID.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The ID of the document to fetch.
+    /// * `version` - Optionally, the version of the document to fetch.
+    ///   If not provided, the latest version will be fetched.
+    /// * `full_content` - Optionally, whether to fetch the full content of the document.
+    ///   If not provided, the default value of the client will be used.
+    /// * `full_permissions` - Optionally, whether to fetch the full permissions of the document.
+    ///   If not provided, the default value of the client will be used.
     ///
     /// # Errors
     ///
@@ -432,16 +431,44 @@ impl PaperlessClient {
     pub async fn get_document_by_id(
         &self,
         id: DocumentId,
+        version: Option<DocumentVersionId>,
         full_content: Option<bool>,
         full_permissions: Option<bool>,
     ) -> Result<Document> {
         let content_is_truncated = !full_content.unwrap_or(self.request_full_content);
-        Ok(Document::new(
-            self.get_document_data_by_id(id, full_content, full_permissions)
+
+        let mut doc = Document::new(
+            self.get_document_data_by_id(id, version, full_content, full_permissions)
                 .await?,
             Arc::new(self.clone()),
             content_is_truncated,
-        ))
+        );
+
+        if let Some(version) = version {
+            doc = doc.with_selected_version(version);
+        }
+
+        Ok(doc)
+    }
+
+    /// Find the root document of a document version.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the root document cannot be found.
+    pub async fn find_root_document(&self, id: DocumentVersionId) -> Result<DocumentId> {
+        #[derive(serde::Deserialize)]
+        struct RootDocument {
+            root_id: DocumentId,
+        }
+
+        self.request_json_no_body::<RootDocument>(
+            Method::GET,
+            &format!("documents/{id}/root/"),
+            None,
+        )
+        .await
+        .map(|data| data.root_id)
     }
 
     /// Make a request and parse the response as JSON.
@@ -502,7 +529,9 @@ impl PaperlessClient {
             .request(method, format!("{}{endpoint}", self.base_url))
             .header(ACCEPT, "application/json");
 
-        if let Some(params) = query_params {
+        if let Some(params) = query_params
+            && !params.is_empty()
+        {
             req = req.query(params);
         }
 
@@ -557,7 +586,7 @@ impl PaperlessClient {
         query_params: Option<&HashMap<&str, Cow<'_, str>>>,
     ) -> Result<Vec<T>> {
         let mut results = vec![];
-        let mut all_query_params = self.default_query_params().unwrap_or_default();
+        let mut all_query_params = self.default_query_params();
         if let Some(query_params) = query_params {
             all_query_params.extend(query_params.clone());
         }
@@ -922,4 +951,19 @@ impl PaperlessClient {
     pub fn groups(&self) -> &HashMap<GroupId, Group> {
         &self.cached_data.groups
     }
+}
+
+fn create_header_map(headers: &HashMap<String, String>) -> Result<HeaderMap> {
+    let mut headers_map = HeaderMap::new();
+
+    for (key, value) in headers {
+        headers_map.insert(
+            HeaderName::from_str(key).map_err(|err| Error::InvalidHeader(err.to_string()))?,
+            value
+                .parse()
+                .map_err(|err: InvalidHeaderValue| Error::InvalidHeader(err.to_string()))?,
+        );
+    }
+
+    Ok(headers_map)
 }

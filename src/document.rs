@@ -8,7 +8,7 @@
 //! The changes are only sent to the Paperless server when
 //! [`patch`](Document::patch) is called.
 
-use std::{fmt::Display, path::Path, sync::Arc, time::Duration};
+use std::{borrow::Cow, collections::HashMap, fmt::Display, path::Path, sync::Arc, time::Duration};
 
 use chrono::{DateTime, NaiveDate, Utc};
 use derive_more::Display;
@@ -25,8 +25,8 @@ use crate::{
     attributes::{custom_field::DocumentCustomField, permission::ItemPermissions},
     client::PaperlessClient,
     id::{
-        CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, StoragePathId, TagId,
-        UniqueTaskId, UserId,
+        CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, DocumentVersionId,
+        StoragePathId, TagId, UniqueTaskId, UserId,
     },
     note::Note,
     share_link::{CreateShareLink, ShareLink, ShareLinkFileVersion},
@@ -48,6 +48,7 @@ pub struct Document {
     data: DocumentData,
 
     client: Arc<PaperlessClient>,
+    selected_version: Option<DocumentVersionId>,
     content_is_truncated: bool,
     changed_values: BitFlags<ChangedAttributes>,
 }
@@ -133,7 +134,7 @@ pub struct ArchiveSerialNumber(pub u32);
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct DocumentVersion {
-    pub id: DocumentId,
+    pub id: DocumentVersionId,
     pub added: DateTime<Utc>,
 
     #[serde(rename = "version_label")]
@@ -141,6 +142,16 @@ pub struct DocumentVersion {
 
     pub checksum: Option<String>,
     pub is_root: bool,
+}
+
+#[derive(Debug, Serialize)]
+struct UpdateDocumentVersionLabel<'a> {
+    version_label: Option<&'a str>,
+}
+
+#[derive(Debug, Deserialize)]
+struct DeleteDocumentVersionResponse {
+    current_version_id: DocumentVersionId,
 }
 
 #[bitflags]
@@ -171,6 +182,14 @@ pub enum Content<'a> {
     Truncated(&'a str),
 }
 
+impl DocumentVersionId {
+    /// Convert this version ID to a document ID.
+    #[must_use]
+    pub fn as_document_id(&self) -> DocumentId {
+        DocumentId(self.0)
+    }
+}
+
 impl Document {
     pub(crate) fn new(
         data: DocumentData,
@@ -180,9 +199,21 @@ impl Document {
         Self {
             data,
             client,
+            selected_version: None,
             content_is_truncated,
             changed_values: BitFlags::default(),
         }
+    }
+
+    /// Select a specific version of the document.
+    pub(crate) fn with_selected_version(mut self, version: DocumentVersionId) -> Self {
+        self.selected_version = Some(version);
+        self
+    }
+
+    fn version_query_params(&self) -> Option<HashMap<&'static str, Cow<'static, str>>> {
+        self.selected_version
+            .map(|version| HashMap::from([("version", Cow::Owned(version.to_string()))]))
     }
 
     /// Get the unique identifier of the document.
@@ -190,6 +221,15 @@ impl Document {
     #[must_use]
     pub fn id(&self) -> DocumentId {
         self.data.id
+    }
+
+    /// Get the explicitly selected file version, if any.
+    ///
+    /// `None` means version-aware operations use the latest version.
+    #[inline]
+    #[must_use]
+    pub fn selected_version(&self) -> Option<DocumentVersionId> {
+        self.selected_version
     }
 
     /// Get the archive serial number of the document.
@@ -461,7 +501,12 @@ impl Document {
         let document_data = self
             .client
             .as_ref()
-            .get_document_data_by_id(self.data.id, Some(!self.content_is_truncated), None)
+            .get_document_data_by_id(
+                self.data.id,
+                self.selected_version,
+                Some(!self.content_is_truncated),
+                None,
+            )
             .await?;
 
         self.data = document_data;
@@ -477,12 +522,38 @@ impl Document {
     ///
     /// Returns an error if the thumbnail fails to download.
     pub async fn thumbnail(&self) -> Result<Vec<u8>> {
+        let query_params = self.version_query_params();
         let resp = self
             .client
             .request_no_body(
                 Method::GET,
                 &format!("/api/documents/{}/thumb/", self.data.id),
-                None,
+                query_params.as_ref(),
+            )
+            .await?;
+
+        Ok(resp
+            .bytes()
+            .await
+            .map_err(|e| Error::Other(format!("Failed to read response body: {e}")))?
+            .to_vec())
+    }
+
+    /// Get the PDF preview for the selected or latest document version.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the preview cannot be fetched.
+    pub async fn preview(&self) -> Result<Vec<u8>> {
+        self.fail_if_deleted()?;
+
+        let query_params = self.version_query_params();
+        let resp = self
+            .client
+            .request_no_body(
+                Method::GET,
+                &format!("/api/documents/{}/preview/", self.data.id),
+                query_params.as_ref(),
             )
             .await?;
 
@@ -564,7 +635,7 @@ impl Document {
                 Method::PATCH,
                 &format!("/api/documents/{}/", self.data.id),
                 Some(&patch),
-                None,
+                self.version_query_params().as_ref(),
             )
             .await?;
 
@@ -604,7 +675,7 @@ impl Document {
 
         let doc = self
             .client
-            .get_document_data_by_id(self.data.id, Some(true), None)
+            .get_document_data_by_id(self.data.id, self.selected_version, Some(true), None)
             .await?;
         self.data.content = doc.content;
         self.content_is_truncated = false;
@@ -614,15 +685,15 @@ impl Document {
     async fn download_request(&self, original: bool) -> Result<Response> {
         self.fail_if_deleted()?;
 
+        let mut query_params = self.version_query_params().unwrap_or_default();
+        query_params.insert("original", Cow::Owned(original.to_string()));
+
         let resp = self
             .client
             .request_no_body(
                 Method::GET,
-                &format!(
-                    "/api/documents/{}/download/?original={original}",
-                    self.data.id
-                ),
-                None,
+                &format!("/api/documents/{}/download/", self.data.id),
+                Some(&query_params),
             )
             .await?;
 
@@ -698,23 +769,36 @@ impl Document {
     ///
     /// Returns an error if the request fails.
     pub async fn get_metadata(&self) -> Result<DocumentMetadata> {
+        let query_params = self.version_query_params();
         self.client
             .request_json_no_body(
                 Method::GET,
                 &format!("/api/documents/{id}/metadata/", id = self.data.id),
-                None,
+                query_params.as_ref(),
             )
             .await
     }
 
-    /// Uploads a new version of the document from the specified path.
+    /// Uploads a new version with an optional version label.
     ///
-    /// Returns the [`UniqueTaskId`] on success.
+    /// Returns the [`UniqueTaskId`] for the asynchronous consumption task on success. An empty
+    /// label is treated as no label by Paperless.
     ///
     /// # Errors
     ///
-    /// Returns an error if the request fails.
-    pub async fn upload_new_version(&self, path: &Path, filename: &str) -> Result<UniqueTaskId> {
+    /// Returns an error if the upload request fails.
+    pub async fn upload_new_version(
+        &self,
+        path: &Path,
+        filename: &str,
+        version_label: Option<&str>,
+    ) -> Result<UniqueTaskId> {
+        self.fail_if_deleted()?;
+
+        let additional_fields = version_label
+            .map(|label| vec![("version_label", label)])
+            .unwrap_or_default();
+
         let resp = self
             .client
             .multipart_form_upload(
@@ -722,12 +806,84 @@ impl Document {
                 &format!("/api/documents/{id}/update_version/", id = self.data.id),
                 path,
                 filename,
+                &additional_fields,
             )
             .await?;
 
         resp.json::<UniqueTaskId>()
             .await
             .map_err(|err| Error::Other(format!("Failed to parse task ID: {err:?}")))
+    }
+
+    /// Updates the label of a document version.
+    ///
+    /// Passing `None` or a blank label clears the label. The returned value and the matching
+    /// entry in [`versions`](Self::versions) contain the normalized server value.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the version does not belong to this document or the request fails.
+    pub async fn set_version_label(
+        &mut self,
+        version: DocumentVersionId,
+        label: Option<&str>,
+    ) -> Result<DocumentVersion> {
+        self.fail_if_deleted()?;
+
+        let updated: DocumentVersion = self
+            .client
+            .request_json(
+                Method::PATCH,
+                &format!("/api/documents/{}/versions/{version}/", self.data.id),
+                Some(&UpdateDocumentVersionLabel {
+                    version_label: label,
+                }),
+                None,
+            )
+            .await?;
+
+        if let Some(cached) = self
+            .data
+            .versions
+            .iter_mut()
+            .find(|item| item.id == version)
+        {
+            *cached = updated.clone();
+        }
+
+        Ok(updated)
+    }
+
+    /// Deletes a non-root document version.
+    ///
+    /// Returns the version that Paperless considers current after deletion. This may represent
+    /// the root/original version when the last non-root version was deleted.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the version is the root version, does not belong to this document, or
+    /// the request fails.
+    pub async fn delete_version(
+        &mut self,
+        version: DocumentVersionId,
+    ) -> Result<DocumentVersionId> {
+        self.fail_if_deleted()?;
+
+        let response: DeleteDocumentVersionResponse = self
+            .client
+            .request_json_no_body(
+                Method::DELETE,
+                &format!("/api/documents/{}/versions/{version}/", self.data.id),
+                None,
+            )
+            .await?;
+
+        self.data.versions.retain(|item| item.id != version);
+        if self.selected_version == Some(version) {
+            self.selected_version = Some(response.current_version_id);
+        }
+
+        Ok(response.current_version_id)
     }
 
     /// Returns the link to the document page.

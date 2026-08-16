@@ -97,6 +97,7 @@ define_ids!(
     (CorrespondentId, u32, "correspondents"),
     (CustomFieldId, u32, "custom_fields"),
     (DocumentId, u32, "documents"),
+    (DocumentVersionId, u32),
     (DocumentTypeId, u32, "document_types"),
     (GroupId, u32, "groups"),
     (NoteId, u32),

@@ -57,9 +57,12 @@ pub struct Task {
     /// The result data for the task.
     pub result_data: Option<serde_json::Value>,
 
-    /// The ID of the related documents.
+    /// IDs of related document records.
+    ///
+    /// A document upload reports a root [`DocumentId`](crate::id::DocumentId).
+    /// A version upload reports a [`DocumentVersionId`](crate::id::DocumentVersionId)
     #[serde(rename = "related_document_ids")]
-    pub related_documents: Option<Vec<crate::id::DocumentId>>,
+    pub related_documents: Option<Vec<crate::id::DocumentVersionId>>,
 
     /// Whether the task has been acknowledged.
     pub acknowledged: bool,

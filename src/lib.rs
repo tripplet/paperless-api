@@ -37,6 +37,9 @@ pub enum Error {
     #[error("other error: {0}")]
     Other(String),
 
+    #[error("invalid header: {0}")]
+    InvalidHeader(String),
+
     #[error("invalid json: {0}")]
     InvalidJson(String),
 
