@@ -20,7 +20,7 @@ correspondents, document types, and tasks.
 - Async API built on `reqwest`
 - Access documents and related attributes from Paperless
 - Local attribute caching
-- Upload documents
+- Upload/Download documents
 - Query task status
 
 ## Getting started
@@ -74,8 +74,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Creating and updating attributes
 
-You can create, update and delete attributes items such as tags, correspondents,
-document types, etc.
+You can create, update and delete attributes such as tags, correspondents, and document types, etc.
 See [`CreateDto`](dto::CreateDto) and [`UpdateDto`](dto::UpdateDto)
 
 ```rust,no_run

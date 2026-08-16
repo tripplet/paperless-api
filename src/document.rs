@@ -664,16 +664,6 @@ impl Document {
         Ok(())
     }
 
-    /// Generates a share link for the document that expires after the specified duration.
-    pub fn generate_share_link_duration(
-        &self,
-        valid_for: Duration,
-        version: ShareLinkFileVersion,
-    ) -> impl Future<Output = Result<ShareLink>> {
-        let expires = Utc::now() + valid_for;
-        self.generate_share_link_expires(expires, version)
-    }
-
     /// Returns the link to the document page.
     #[must_use]
     pub fn page_link(&self) -> String {
@@ -682,6 +672,16 @@ impl Document {
             base_url = self.client.base_url,
             id = self.data.id
         )
+    }
+
+    /// Generates a share link for the document that expires after the specified duration.
+    pub fn generate_share_link_duration(
+        &self,
+        valid_for: Duration,
+        version: ShareLinkFileVersion,
+    ) -> impl Future<Output = Result<ShareLink>> {
+        let expires = Utc::now() + valid_for;
+        self.generate_share_link_expires(expires, version)
     }
 
     /// Generates a share link for the document that expires at the specified time.
