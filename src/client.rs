@@ -747,14 +747,14 @@ impl PaperlessClient {
         }
     }
 
-    /// Upload a document to Paperless.
-    ///
-    /// Returns the task ID on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the upload fail.
-    pub async fn upload_document(&self, file_path: &Path, filename: &str) -> Result<UniqueTaskId> {
+    pub(crate) async fn multipart_form_upload(
+        &self,
+        field_name: &str,
+        endpoint: &str,
+        file_path: &Path,
+        filename: &str,
+        additional_fields: &[(&str, &str)],
+    ) -> Result<reqwest::Response> {
         let stream = tokio::fs::File::open(file_path)
             .await
             .map_err(|e| Error::Other(format!("Failed to open file: {e}")))?;
@@ -771,16 +771,17 @@ impl PaperlessClient {
             .map_err(|e| Error::Other(format!("Failed to read file metadata: {e}")))?
             .len();
 
-        let form = multipart::Form::new().part(
-            "document",
+        let mut form = multipart::Form::new().part(
+            field_name.to_string(),
             multipart::Part::stream_with_length(stream, file_len).file_name(filename.to_string()),
         );
-
-        let url = format!("{}/api/documents/post_document/", self.base_url);
+        for &(name, value) in additional_fields {
+            form = form.text(name.to_owned(), value.to_owned());
+        }
 
         let resp = self
             .client
-            .post(&url)
+            .post(format!("{}{}", self.base_url, endpoint))
             .multipart(form)
             .send()
             .await
@@ -794,11 +795,30 @@ impl PaperlessClient {
             });
         }
 
-        let task_id: String = resp
-            .json()
+        Ok(resp)
+    }
+
+    /// Upload a document to Paperless.
+    ///
+    /// Returns the [`UniqueTaskId`] on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the upload fail.
+    pub async fn upload_document(&self, file_path: &Path, filename: &str) -> Result<UniqueTaskId> {
+        let resp = self
+            .multipart_form_upload(
+                "document",
+                "/api/documents/post_document/",
+                file_path,
+                filename,
+                &[],
+            )
+            .await?;
+
+        resp.json::<UniqueTaskId>()
             .await
-            .map_err(|e| Error::Other(format!("Failed to parse task ID: {e:?}")))?;
-        Ok(UniqueTaskId(task_id))
+            .map_err(|err| Error::Other(format!("Failed to parse task ID: {err:?}")))
     }
 
     /// Get the tags cache.

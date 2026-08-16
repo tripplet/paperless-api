@@ -8,7 +8,7 @@
 //! The changes are only sent to the Paperless server when
 //! [`patch`](Document::patch) is called.
 
-use std::{fmt::Display, sync::Arc, time::Duration};
+use std::{fmt::Display, path::Path, sync::Arc, time::Duration};
 
 use chrono::{DateTime, NaiveDate, Utc};
 use derive_more::Display;
@@ -25,7 +25,8 @@ use crate::{
     attributes::{custom_field::DocumentCustomField, permission::ItemPermissions},
     client::PaperlessClient,
     id::{
-        CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, StoragePathId, TagId, UserId,
+        CorrespondentId, CustomFieldId, DocumentId, DocumentTypeId, StoragePathId, TagId,
+        UniqueTaskId, UserId,
     },
     note::Note,
     share_link::{CreateShareLink, ShareLink, ShareLinkFileVersion},
@@ -97,6 +98,33 @@ pub(crate) struct DocumentData {
 
     #[dto(skip)]
     versions: Vec<DocumentVersion>,
+}
+
+/// Metadata for a document.
+#[derive(Debug, Clone, Deserialize)]
+pub struct DocumentMetadata {
+    pub original_checksum: String,
+    pub original_filename: Option<String>,
+    pub original_size: u64,
+    pub original_mime_type: Option<String>,
+    pub original_metadata: Vec<MetadataEntry>,
+
+    pub has_archive_version: bool,
+    pub archive_metadata: Option<Vec<MetadataEntry>>,
+    pub archive_checksum: Option<String>,
+    pub archive_media_filename: Option<String>,
+    pub archive_size: Option<u64>,
+
+    pub lang: String,
+}
+
+/// Metadata entry for a document.
+#[derive(Debug, Clone, Deserialize)]
+pub struct MetadataEntry {
+    pub namespace: String,
+    pub prefix: String,
+    pub key: String,
+    pub value: String,
 }
 
 #[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
@@ -598,13 +626,13 @@ impl Document {
             )
             .await?;
 
-        if !resp.status().is_success() {
+        if resp.status().is_success() {
+            Ok(resp)
+        } else {
             Err(Error::Other(format!(
                 "Failed to download document: {}",
                 resp.status()
             )))
-        } else {
-            Ok(resp)
         }
     }
 
@@ -662,6 +690,44 @@ impl Document {
             .await?;
 
         Ok(())
+    }
+
+    /// Requests the metadata for this document.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the request fails.
+    pub async fn get_metadata(&self) -> Result<DocumentMetadata> {
+        self.client
+            .request_json_no_body(
+                Method::GET,
+                &format!("/api/documents/{id}/metadata/", id = self.data.id),
+                None,
+            )
+            .await
+    }
+
+    /// Uploads a new version of the document from the specified path.
+    ///
+    /// Returns the [`UniqueTaskId`] on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the request fails.
+    pub async fn upload_new_version(&self, path: &Path, filename: &str) -> Result<UniqueTaskId> {
+        let resp = self
+            .client
+            .multipart_form_upload(
+                "document",
+                &format!("/api/documents/{id}/update_version/", id = self.data.id),
+                path,
+                filename,
+            )
+            .await?;
+
+        resp.json::<UniqueTaskId>()
+            .await
+            .map_err(|err| Error::Other(format!("Failed to parse task ID: {err:?}")))
     }
 
     /// Returns the link to the document page.
