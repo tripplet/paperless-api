@@ -184,6 +184,81 @@ impl PaperlessClient {
         })
     }
 
+    /// Request an API token using login credentials.
+    ///
+    /// Optionally, a two-factor authentication `code` can be provided.
+    ///
+    /// The returned token can be used to create a [`PaperlessClient`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the request fails, the credentials are rejected, or the response is
+    /// invalid.
+    pub async fn request_token(
+        base_url: &str,
+        headers: Option<&HashMap<String, String>>,
+        client_builder: Option<reqwest::ClientBuilder>,
+        username: &str,
+        password: &str,
+        code: Option<&str>,
+    ) -> Result<String> {
+        #[derive(Serialize)]
+        struct TokenRequest<'a> {
+            username: &'a str,
+            password: &'a str,
+            
+            #[serde(skip_serializing_if = "Option::is_none")]
+            code: Option<&'a str>,
+        }
+
+        #[derive(Deserialize)]
+        struct TokenResponse {
+            token: String,
+        }
+
+        let mut client = client_builder.unwrap_or_else(|| reqwest::Client::builder().zstd(true));
+
+        if let Some(headers) = headers {
+            client = client.default_headers(create_header_map(headers)?);
+        }
+
+        let client = client.build().map_err(|err| Error::Request(err.into()))?;
+
+        let endpoint = format!("{}/api/token/", base_url.trim_end_matches('/'));
+        let request = client
+            .post(&endpoint)
+            .header(ACCEPT, "application/json")
+            .json(&TokenRequest {
+                username,
+                password,
+                code,
+            })
+            .build()
+            .map_err(|err| Error::Request(err.into()))?;
+
+        // Manual request avoiding the convenience methods to avoid logging
+        // of the request body containing username/password credentials
+        let response = client
+            .execute(request)
+            .await
+            .map_err(|err| Error::Request(err.into()))?;
+
+        if !response.status().is_success() {
+            return Err(Error::Response {
+                status_code: response.status().as_u16(),
+                body: response.text().await.unwrap_or_default(),
+            });
+        }
+
+        let token = response
+            .json::<TokenResponse>()
+            .await
+            .map_err(|err| Error::Request(err.into()))?
+            .token;
+
+        Ok(token)
+    }
+
     /// Sets whether to request full permissions data for items during refresh.
     ///
     /// If not enabled only simple permission data is loaded.
@@ -464,7 +539,7 @@ impl PaperlessClient {
 
         self.request_json_no_body::<RootDocument>(
             Method::GET,
-            &format!("documents/{id}/root/"),
+            &format!("/api/documents/{id}/root/"),
             None,
         )
         .await
