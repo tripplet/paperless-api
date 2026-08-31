@@ -206,7 +206,7 @@ impl PaperlessClient {
         struct TokenRequest<'a> {
             username: &'a str,
             password: &'a str,
-            
+
             #[serde(skip_serializing_if = "Option::is_none")]
             code: Option<&'a str>,
         }
