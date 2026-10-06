@@ -118,6 +118,7 @@ pub enum FilterRuleType {
     MimeTypeIs = 47,
     SimpleTitleSearch = 48,
     SimpleTextSearch = 49,
+    HasDuplicates = 50,
 
     Unknown(u8),
 }
@@ -131,11 +132,11 @@ mod tests {
         let zero: FilterRuleType = serde_json::from_str("0").unwrap();
         assert!(matches!(zero, FilterRuleType::TitleContains));
 
-        let last: FilterRuleType = serde_json::from_str("49").unwrap();
-        assert!(matches!(last, FilterRuleType::SimpleTextSearch));
+        let last: FilterRuleType = serde_json::from_str("50").unwrap();
+        assert!(matches!(last, FilterRuleType::HasDuplicates));
 
-        let first_unknown: FilterRuleType = serde_json::from_str("50").unwrap();
-        assert!(matches!(first_unknown, FilterRuleType::Unknown(50)));
+        let first_unknown: FilterRuleType = serde_json::from_str("51").unwrap();
+        assert!(matches!(first_unknown, FilterRuleType::Unknown(51)));
     }
 
     #[test]

@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use serde::Deserialize;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
-use paperless_api_macros::{Item, UpdateDto};
+use paperless_api_macros::{Item, ReprSerde, UpdateDto};
 
 /// A workflow.
 #[derive(Debug, Clone, Deserialize, Item, UpdateDto)]
@@ -68,7 +68,7 @@ pub enum WorkflowTriggerType {
 }
 
 /// The type of action that is executed when a workflow is triggered.
-#[derive(Debug, Clone, Serialize_repr, Deserialize_repr)]
+#[derive(Debug, Clone, ReprSerde)]
 #[repr(u8)]
 pub enum WorkflowActionType {
     Assign = 1,
@@ -77,6 +77,10 @@ pub enum WorkflowActionType {
     Webhook = 4,
     PasswordRemoval = 5,
     MoveToTrash = 6,
+    RemoteOCR = 7,
+    ApplyAISuggestions = 8,
+
+    Unknown(u8),
 }
 
 /// A webhook action that can be executed when a workflow is triggered.
