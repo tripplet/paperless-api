@@ -41,7 +41,7 @@ macro_rules! define_ids {
     (@emit copy $name:ident, $type:ty $(, $endpoint:literal)?) => {
         #[derive(Clone, Copy, Display, Default, PartialEq, Eq, Hash, Deserialize, Serialize)]
         #[repr(transparent)]
-        /// ID type for a Paperless entity.
+        #[doc = paperless_api_macros::id_doc!($name, "ID of a {} entity.")]
         pub struct $name(pub $type);
 
         impl std::fmt::Debug for $name {
@@ -63,7 +63,7 @@ macro_rules! define_ids {
     (@emit noncopy $name:ident, $type:ty $(, $endpoint:literal)?) => {
         #[derive(Clone, Display, Default, PartialEq, Eq, Hash, Deserialize, Serialize)]
         #[repr(transparent)]
-        /// ID type for a Paperless entity (non-copy).
+        #[doc = paperless_api_macros::id_doc!($name, "ID of a {} entity.")]
         pub struct $name(pub $type);
 
         impl std::fmt::Debug for $name {

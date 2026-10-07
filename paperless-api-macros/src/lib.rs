@@ -7,6 +7,40 @@ use syn::{DeriveInput, parse_macro_input};
 
 use crate::derive_base::BaseStruct;
 
+/// Replaces each `{}` in a template with an ID's name, stripping `Id` and splitting CamelCase.
+///
+/// For example, `id_doc!(CustomFieldId, "ID of a {} entity.")` produces
+/// `"ID of a custom field entity."`.
+#[proc_macro]
+pub fn id_doc(input: TokenStream) -> TokenStream {
+    let parse_input = |input: syn::parse::ParseStream| {
+        let name = input.parse::<syn::Ident>()?;
+        input.parse::<syn::Token![,]>()?;
+        let template = input.parse::<syn::LitStr>()?;
+        Ok((name, template))
+    };
+    let (name, template) = parse_macro_input!(input with parse_input);
+    let name = name.to_string();
+    let entity = name.strip_suffix("Id").unwrap_or(&name);
+    let chars: Vec<_> = entity.chars().collect();
+    let mut words = String::new();
+
+    for (index, &ch) in chars.iter().enumerate() {
+        if index > 0
+            && ch.is_uppercase()
+            && (chars[index - 1].is_lowercase()
+                || chars[index - 1].is_numeric()
+                || chars.get(index + 1).is_some_and(|next| next.is_lowercase()))
+        {
+            words.push(' ');
+        }
+        words.extend(ch.to_lowercase());
+    }
+
+    let doc = template.value().replace("{}", &words);
+    quote!(#doc).into()
+}
+
 /// Derives a `Create..` struct for the given input struct.
 #[proc_macro_derive(CreateDto, attributes(dto, api_info))]
 pub fn derive_create_dto(input: TokenStream) -> TokenStream {
