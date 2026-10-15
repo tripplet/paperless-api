@@ -1,4 +1,11 @@
-//! Types related to document types.
+//! Document types.
+//!
+//! Load [`DocumentType`] values with [`load_items`](crate::PaperlessClient::load_items) or
+//! [`load_by_id`](crate::PaperlessClient::load_by_id)
+//!
+//! See [`attributes`](crate::attributes) for caching and writes. 
+//!
+//! Assign a document type with [`set_document_type`](crate::Document::set_document_type).
 
 use serde::{Deserialize, Serialize};
 

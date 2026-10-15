@@ -1,4 +1,11 @@
-//! Types related to custom fields.
+//! Custom field definitions and document values.
+//!
+//! Load [`CustomField`] values with [`load_items`](crate::PaperlessClient::load_items) or
+//! [`load_by_id`](crate::PaperlessClient::load_by_id).
+//!
+//! See [`attributes`](crate::attributes) for caching and writes.
+//!
+//! Assign an ID with [`set_custom_field`](crate::Document::set_custom_field).
 
 use serde::{Deserialize, Serialize};
 

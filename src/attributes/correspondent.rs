@@ -1,4 +1,11 @@
-//! Types related to correspondents.
+//! Document correspondents.
+//!
+//! Load [`Correspondent`] values with [`load_items`](crate::PaperlessClient::load_items) or
+//! [`load_by_id`](crate::PaperlessClient::load_by_id).
+//!
+//! See [`attributes`](crate::attributes) for caching and writes.
+//!
+//! Assign an correspondent with [`set_correspondent`](crate::Document::set_correspondent).
 
 use serde::{Deserialize, Serialize};
 

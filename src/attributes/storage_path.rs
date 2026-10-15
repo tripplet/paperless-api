@@ -1,4 +1,11 @@
-//! Types related to storage paths.
+//! Document storage paths.
+//!
+//! Load [`StoragePath`] values with [`load_items`](crate::PaperlessClient::load_items) or
+//! [`load_by_id`](crate::PaperlessClient::load_by_id).
+//!
+//! See [`attributes`](crate::attributes) for caching and writes.
+//!
+//! Assign an storage path with [`set_storage_path`](crate::Document::set_storage_path).
 
 use serde::{Deserialize, Serialize};
 

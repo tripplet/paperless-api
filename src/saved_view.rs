@@ -1,4 +1,8 @@
-//! Types related to saved views in the paperless UI.
+//! Saved views in the Paperless UI.
+//!
+//! Fetch with [`get_saved_views`](crate::PaperlessClient::get_saved_views).
+//! Use [`CreateSavedView`] with [`create`](crate::PaperlessClient::create) or
+//! [`UpdateSavedView`] with [`update`](crate::PaperlessClient::update).
 
 use derive_more::Display;
 use paperless_api_macros::{CreateDto, Item, ReprSerde, UpdateDto};

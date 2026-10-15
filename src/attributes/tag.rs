@@ -1,4 +1,11 @@
-//! Types related to document tags.
+//! Document tags.
+//!
+//! Load [`Tag`] values with [`load_items`](crate::PaperlessClient::load_items) or
+//! [`load_by_id`](crate::PaperlessClient::load_by_id).
+//!
+//! See [`attributes`](crate::attributes) for caching and writes. 
+//!
+//! Add a tag to a document with [`add_tag`](crate::Document::add_tag).
 
 use serde::{Deserialize, Serialize};
 

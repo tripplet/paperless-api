@@ -11,7 +11,7 @@
 
 A small async Rust client for interacting with the Paperless-ngx API.
 
-This crate provides `PaperlessClient` for talking to a Paperless instance and
+This crate provides [`PaperlessClient`](crate::client) for talking to a Paperless instance and
 convenience types for working with documents, tags, custom fields,
 correspondents, document types, and tasks.
 
@@ -30,15 +30,14 @@ Create a client with your Paperless base URL and API token:
 ```rust,no_run
 use paperless_api::PaperlessClient;
 
-async fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let client = PaperlessClient::new(
-        "https://paperless.example.com",
-        "your-api-token",
-        None,
-    )?;
-
-    Ok(())
-}
+# async {
+let client = PaperlessClient::new(
+    "https://paperless.example.com",
+    "your-api-token",
+    None,
+)?;
+# Ok::<(), paperless_api::Error>(())
+# };
 ```
 
 ## Refreshing cached attributes
@@ -51,25 +50,24 @@ You can refresh the caches individually or all:
 ```rust,no_run
 use paperless_api::{PaperlessClient, RefreshAttributes};
 
-async fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let mut client = PaperlessClient::new(
-        "https://paperless.example.com",
-        "your-api-token",
-        None,
-    )?;
+# async {
+let mut client = PaperlessClient::new(
+    "https://paperless.example.com",
+    "your-api-token",
+    None,
+)?;
 
-    client
-        .refresh([
-            RefreshAttributes::Tags,
-            RefreshAttributes::CustomFields,
-            RefreshAttributes::Correspondents,
-        ])
-        .await?;
+client
+    .refresh([
+        RefreshAttributes::Tags,
+        RefreshAttributes::CustomFields,
+        RefreshAttributes::Correspondents,
+    ])
+    .await?;
 
-    client.refresh_all().await?;
-
-    Ok(())
-}
+client.refresh_all().await?;
+# Ok::<(), paperless_api::Error>(())
+# };
 ```
 
 ## Creating and updating attributes
@@ -80,34 +78,33 @@ See [`CreateDto`](dto::CreateDto) and [`UpdateDto`](dto::UpdateDto)
 ```rust,no_run
 use paperless_api::attributes::{MatchAlgorithm, tag::*};
 
-async fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let client = paperless_api::PaperlessClient::new(
-        "https://paperless.example.com",
-        "your-api-token",
-        None,
-    )?;
+# async {
+let client = paperless_api::PaperlessClient::new(
+    "https://paperless.example.com",
+    "your-api-token",
+    None,
+)?;
 
-    // Create a new tag
-    let created = client.create(&CreateTag {
-        name: "invoices".to_string(),
-        color: "#ff0000".to_string(),
-        ..Default::default()
-    }).await?;
+// Create a new tag
+let created = client.create(&CreateTag {
+    name: "invoices".to_string(),
+    color: "#ff0000".to_string(),
+    ..Default::default()
+}).await?;
 
-    // Update the tag
-    client.update(created.id, &UpdateTag {
-        name: Some("paid invoices".to_string()),
-        match_pattern: Some("invoice".to_string()),
-        matching_algorithm: Some(MatchAlgorithm::AnyWord),
-        is_insensitive: Some(true),
-        ..Default::default()
-    }).await?;
+// Update the tag
+client.update(created.id, &UpdateTag {
+    name: Some("paid invoices".to_string()),
+    match_pattern: Some("invoice".to_string()),
+    matching_algorithm: Some(MatchAlgorithm::AnyWord),
+    is_insensitive: Some(true),
+    ..Default::default()
+}).await?;
 
-    // Delete a tag
-    client.delete(created.id).await?;
-
-    Ok(())
-}
+// Delete a tag
+client.delete(created.id).await?;
+# Ok::<(), paperless_api::Error>(())
+# };
 ```
 
 ## Additional headers

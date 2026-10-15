@@ -1,4 +1,7 @@
-//! Utility types.
+//! Server statistics and status.
+//!
+//! Fetch [`Statistics`] with [`get_statistics`](crate::PaperlessClient::get_statistics)
+//! and [`ServerStatus`] with [`get_status`](crate::PaperlessClient::get_status).
 
 use serde::Deserialize;
 

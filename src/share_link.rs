@@ -1,4 +1,21 @@
-//! Types related to share links.
+//! Share links for individual documents.
+//!
+//! ```rust,no_run
+//! use paperless_api::{PaperlessClient, id::DocumentId, share_link::ShareLinkFileVersion};
+//! use std::time::Duration;
+//!
+//! # async {
+//! # let client = &PaperlessClient::new("https://paperless.example.com", "token", None)?;
+//! let document = client.get_document_by_id(DocumentId(42), None, None, None).await?;
+//! let link = document.generate_share_link_duration(
+//!     Duration::from_hours(14 * 24), ShareLinkFileVersion::Archive,
+//! ).await?;
+//! println!("{}", link.url(client));
+//! # Ok::<(), paperless_api::Error>(())
+//! # };
+//! ```
+//!
+//! List existing links with [`load_items`](crate::PaperlessClient::load_items) and [`ShareLink`].
 
 use chrono::{DateTime, Utc};
 use derive_more::Display;

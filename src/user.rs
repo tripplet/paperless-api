@@ -1,4 +1,10 @@
-//! Types related to users.
+//! Paperless users.
+//!
+//! Fetch with [`load_items`](crate::PaperlessClient::load_items) or
+//! [`load_by_id`](crate::PaperlessClient::load_by_id), using [`User`].
+//!
+//! For cached access, refresh [`Users`](crate::RefreshAttributes::Users) before
+//! reading [`users`](crate::PaperlessClient::users).
 
 use paperless_api_macros::{CreateDto, Item, UpdateDto};
 use serde::Deserialize;

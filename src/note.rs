@@ -1,4 +1,4 @@
-//! Types related to notes.
+//! Types related to notes of documents.
 
 use chrono::{DateTime, Utc};
 use serde::Deserialize;

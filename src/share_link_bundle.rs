@@ -1,4 +1,9 @@
-//! Types related to share links.
+//! Bundles of shared documents.
+//!
+//! Fetch [`ShareLinkBundle`] values with [`load_items`](PaperlessClient::load_items)
+//! or [`load_by_id`](PaperlessClient::load_by_id). A bundle's [`url`](ShareLinkBundle::url)
+//! is available for download once its [`status`](ShareLinkBundle::status) is
+//! [`Ready`](ShareLinkBundleStatus::Ready).
 
 use chrono::{DateTime, Utc};
 use derive_more::Display;

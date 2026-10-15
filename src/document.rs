@@ -1,12 +1,65 @@
 //! Types for working with Paperless documents.
 //!
-//! Document mutations are applied locally first.
-//! Methods such as [`set_title`](Document::set_title),
-//! [`set_content`](Document::set_content),
-//! [`add_tag`](Document::add_tag), etc..
-//! only update the in-memory [`Document`] value and mark it as changed.
-//! The changes are only sent to the Paperless server when
-//! [`patch`](Document::patch) is called.
+//! Obtain a [`Document`] through [`get_document_by_id`](PaperlessClient::get_document_by_id),
+//! [`search`](PaperlessClient::search), or [`query_documents`](PaperlessClient::query_documents). Each
+//! returned document retains a client for subsequent requests, such as
+//! [`download_to_file`](Document::download_to_file), [`get_metadata`](Document::get_metadata), and [`refresh`](Document::refresh).
+//!
+//! ```rust,no_run
+//! use paperless_api::{PaperlessClient, id::DocumentId};
+//!
+//! async fn run(client: &PaperlessClient) -> Result<(), paperless_api::Error> {
+//!     // Fetch the latest version using the client's content and permission defaults.
+//!     let mut document = client.get_document_by_id(DocumentId(42), None, None, None).await?;
+//!     println!("{}", document.title());
+//!
+//!     document.set_title("Paid invoice");
+//!     document.patch().await?;
+//!
+//!     for (document, hit) in client.search("invoice").await? {
+//!         println!("{} (score: {})", document.title(), hit.score);
+//!     }
+//!     Ok(())
+//! }
+//! ```
+//!
+//! Content is truncated by default. Request full content with the third
+//! argument of [`get_document_by_id`](PaperlessClient::get_document_by_id) set to `Some(true)`, or
+//! load it later with [`get_full_content`](Document::get_full_content).
+//!
+//! # Adding and downloading a document
+//!
+//! Add a document with [`upload_document`](PaperlessClient::upload_document). The returned
+//! [`UniqueTaskId`] identifies the background processing task; inspect it with
+//! [`get_task_status`](PaperlessClient::get_task_status) as shown in [`task`](crate::task).
+//! See the [client guide](crate::client) for an example that polls until the
+//! upload is fully processed.
+//! Once a document is available, fetch it by its document ID to download it.
+//!
+//! ```rust,no_run
+//! use paperless_api::{PaperlessClient, id::DocumentId};
+//! use std::path::Path;
+//!
+//! async fn run(client: &PaperlessClient) -> Result<(), paperless_api::Error> {
+//!     let task_id = client.upload_document(Path::new("invoice.pdf"), "invoice.pdf").await?;
+//!     for task in client.get_task_status(Some(&task_id), None, None).await? {
+//!         println!("Upload status: {}", task.status);
+//!     }
+//!
+//!     // Use the ID of an existing, processed document.
+//!     let document = client.get_document_by_id(DocumentId(42), None, None, None).await?;
+//!     // false downloads the processed/archive file; true downloads the original.
+//!     document.download_to_file(Path::new("downloaded-invoice.pdf"), false).await?;
+//!     let original_bytes = document.download_to_buffer(true).await?;
+//!     println!("Downloaded {} original bytes", original_bytes.len());
+//!     Ok(())
+//! }
+//! ```
+//!
+//! Content is truncated by default; [`get_full_content`](Document::get_full_content)
+//! loads the rest. File downloads overwrite the destination.
+//! For adding a document and waiting for processing, see the [client example](crate::client).
+//! Use [`upload_new_version`](Document::upload_new_version) to add a version to an existing document.
 
 use std::{borrow::Cow, collections::HashMap, fmt::Display, path::Path, sync::Arc, time::Duration};
 

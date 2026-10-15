@@ -1,4 +1,9 @@
-//! Types related to groups.
+//! User groups.
+//!
+//! Fetch with [`load_items`](crate::PaperlessClient::load_items) or
+//! [`load_by_id`](crate::PaperlessClient::load_by_id), using [`Group`].
+//! For cached access, refresh [`Groups`](crate::RefreshAttributes::Groups) before
+//! reading [`groups`](crate::PaperlessClient::groups).
 
 use paperless_api_macros::{CreateDto, Item, UpdateDto};
 use serde::Deserialize;

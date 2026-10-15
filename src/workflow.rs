@@ -1,4 +1,11 @@
-//! Types related to paperless workflows.
+//! Workflows, including their triggers and actions.
+//!
+//! Fetch with [`get_workflows`](crate::PaperlessClient::get_workflows).
+//!
+//! Use [`UpdateWorkflow`] with [`update`](crate::PaperlessClient::update) to change
+//! settings of a workflow.
+//!
+//! Triggers and actions are not yet fully supported
 
 use std::collections::HashMap;
 
